@@ -69,6 +69,15 @@ func TestParseValues(t *testing.T) {
   testAssertFalse(t, p.tokens[1].matches(1, "blah"))
 }
 
+func TestParseInt(t *testing.T) {
+  p := testParsePath(t, "foo/2")
+  testAssertEqual(t, 2, len(p.tokens))
+  testAssertEqual(t, intMatcher, p.tokens[1].keyMatcher.matcherType)
+  testAssertTrue(t, p.tokens[1].matches(2, "thing"))
+  testAssertTrue(t, p.tokens[1].matches("2", "thing"))
+  testAssertFalse(t, p.tokens[1].matches(1, "blah"))
+}
+
 func TestParseRanges(t *testing.T) {
   p := testParsePath(t, "foo/1..3")
   testAssertEqual(t, 2, len(p.tokens))

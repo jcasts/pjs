@@ -127,6 +127,12 @@ func matcherForTokenString(tokenStr string, isKey bool) (*tokenMatcher, error) {
   } else {
     matcher.regexpMatcher, err = regexp.Compile("^" + tokenStr + "$")
     matcher.matcherType = stringMatcher
+
+    // Numbers alone are ambiguous, so we need to check both
+    if num, pErr := strconv.ParseInt(tokenStr, 10, 64); pErr == nil {
+      matcher.intMatcher = num
+      matcher.matcherType = intMatcher
+    }
   }
 
   return matcher, err
