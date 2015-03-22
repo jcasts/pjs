@@ -77,13 +77,17 @@ func (tm *tokenMatcher) matches(value interface{}) bool {
     return true
   }
 
+  if tm.matcherType == stringMatcher {
+    return tm.regexpMatcher != nil && tm.regexpMatcher.MatchString(fmt.Sprintf("%v", value))
+  }
+
   switch value.(type) {
   case int, int8, int16, int32, int64, uint, uint8, uint16, uint32:
     var num int64
     num = reflect.ValueOf(value).Convert(reflect.TypeOf(num)).Int()
     return tm.matchesInt(num)
   default:
-    return tm.regexpMatcher != nil && tm.regexpMatcher.MatchString(fmt.Sprintf("%s", value))
+    return tm.regexpMatcher != nil && tm.regexpMatcher.MatchString(fmt.Sprintf("%v", value))
   }
 }
 

@@ -1,2 +1,2 @@
-# pjs (WIP)
-Pretty print and manipulate JSON data
+# pjs
+(WIP) Pretty print and manipulate JSON data

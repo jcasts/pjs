@@ -96,6 +96,21 @@ func TestParseRanges(t *testing.T) {
   testAssertFalse(t, p.tokens[0].matches("foo", -13))
 }
 
+func TestParseWildcard(t *testing.T) {
+  p := testParsePath(t, "*bar*foo/")
+  testAssertEqual(t, 1, len(p.tokens))
+  testAssertTrue(t, p.tokens[0].matches("barfoo", nil))
+  testAssertTrue(t, p.tokens[0].matches("bar_foo", nil))
+  testAssertTrue(t, p.tokens[0].matches("fizz_bar_foo", nil))
+  testAssertFalse(t, p.tokens[0].matches("fizz_bar_fo", nil))
+  testAssertFalse(t, p.tokens[0].matches("ar_foo", nil))
+
+  p = testParsePath(t, "*5")
+  testAssertEqual(t, 1, len(p.tokens))
+  testAssertTrue(t, p.tokens[0].matches("15", nil))
+  testAssertTrue(t, p.tokens[0].matches(15, nil))
+}
+
 func TestParseParent(t *testing.T) {
   p := testParsePath(t, "foo/bar/..")
   testAssertEqual(t, 3, len(p.tokens))
