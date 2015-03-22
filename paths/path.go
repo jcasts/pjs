@@ -59,6 +59,7 @@ type tokenMatcherType int
 const (
   stringMatcher  tokenMatcherType = iota
   intMatcher
+  boolMatcher
   rangeMatcher 
   parentMatcher
   anyMatcher
@@ -68,6 +69,7 @@ type tokenMatcher struct {
   regexpMatcher *regexp.Regexp
   rangeMatcher []int64
   intMatcher int64
+  boolMatcher bool
   matcherType tokenMatcherType
   recursive bool
 }

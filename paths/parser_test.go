@@ -78,6 +78,16 @@ func TestParseInt(t *testing.T) {
   testAssertFalse(t, p.tokens[1].matches(1, "blah"))
 }
 
+func TestParseBool(t *testing.T) {
+  p := testParsePath(t, "foo/true")
+  testAssertEqual(t, 2, len(p.tokens))
+  testAssertEqual(t, boolMatcher, p.tokens[1].keyMatcher.matcherType)
+  testAssertTrue(t, p.tokens[1].matches(true, "thing"))
+  testAssertTrue(t, p.tokens[1].matches("true", "thing"))
+  testAssertFalse(t, p.tokens[1].matches(false, "blah"))
+  testAssertFalse(t, p.tokens[1].matches("foo", "blah"))
+}
+
 func TestParseRanges(t *testing.T) {
   p := testParsePath(t, "foo/1..3")
   testAssertEqual(t, 2, len(p.tokens))
@@ -109,6 +119,11 @@ func TestParseWildcard(t *testing.T) {
   testAssertEqual(t, 1, len(p.tokens))
   testAssertTrue(t, p.tokens[0].matches("15", nil))
   testAssertTrue(t, p.tokens[0].matches(15, nil))
+
+  p = testParsePath(t, "foo=*false")
+  testAssertEqual(t, 1, len(p.tokens))
+  testAssertTrue(t, p.tokens[0].matches("foo", "is_false"))
+  testAssertTrue(t, p.tokens[0].matches("foo", false))
 }
 
 func TestParseParent(t *testing.T) {
