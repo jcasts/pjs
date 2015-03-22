@@ -78,11 +78,43 @@ func TestParseRanges(t *testing.T) {
   testAssertFalse(t, p.tokens[1].matches(0, nil))
   testAssertFalse(t, p.tokens[1].matches(4, nil))
 
-  p = testParsePath(t, "foo=11..12")
+  p = testParsePath(t, "foo=-12..-11")
   testAssertEqual(t, 1, len(p.tokens))
-  testAssertFalse(t, p.tokens[0].matches("fo", 11))
-  testAssertTrue(t, p.tokens[0].matches("foo", 11))
-  testAssertTrue(t, p.tokens[0].matches("foo", 12))
-  testAssertFalse(t, p.tokens[0].matches("foo", 10))
-  testAssertFalse(t, p.tokens[0].matches("foo", 13))
+  testAssertFalse(t, p.tokens[0].matches("fo", -11))
+  testAssertTrue(t, p.tokens[0].matches("foo", -11))
+  testAssertTrue(t, p.tokens[0].matches("foo", -12))
+  testAssertFalse(t, p.tokens[0].matches("foo", -10))
+  testAssertFalse(t, p.tokens[0].matches("foo", -13))
+}
+
+func TestParseParent(t *testing.T) {
+  p := testParsePath(t, "foo/bar/..")
+  testAssertEqual(t, 3, len(p.tokens))
+  testAssertTrue(t, p.tokens[2].followParent())
+  testAssertFalse(t, p.tokens[2].matches(1, "blah"))
+}
+
+func TestParseRecursive(t *testing.T) {
+  p := testParsePath(t, "foo/bar/**")
+  testAssertEqual(t, 3, len(p.tokens))
+  testAssertTrue(t, p.tokens[2].isRecursive())
+  testAssertTrue(t, p.tokens[2].matches(1, "blah"))
+
+  p = testParsePath(t, "foo/**=bar")
+  testAssertEqual(t, 2, len(p.tokens))
+  testAssertTrue(t, p.tokens[1].isRecursive())
+  testAssertTrue(t, p.tokens[1].matches(1, "bar"))
+  testAssertFalse(t, p.tokens[1].matches(1, "fizz"))
+
+  p = testParsePath(t, "foo/**/bar")
+  testAssertEqual(t, 2, len(p.tokens))
+  testAssertTrue(t, p.tokens[1].isRecursive())
+  testAssertTrue(t, p.tokens[1].matches("bar", nil))
+  testAssertFalse(t, p.tokens[1].matches("fizz", nil))
+
+  p = testParsePath(t, "foo/**/**/bar")
+  testAssertEqual(t, 2, len(p.tokens))
+  testAssertTrue(t, p.tokens[1].isRecursive())
+  testAssertTrue(t, p.tokens[1].matches("bar", nil))
+  testAssertFalse(t, p.tokens[1].matches("fizz", nil))
 }

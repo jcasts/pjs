@@ -2,7 +2,6 @@ package paths
 
 import (
   "errors"
-  //"fmt"
   "regexp"
   "strconv"
 )
@@ -22,6 +21,8 @@ func parsePath(pathStr string) (*path, error) {
   newTokenKey := false
   newTokenValue := false
   processingKey := true
+
+  var lastToken *pathToken
   currToken := &pathToken{}
 
   if pathStr[len(pathStr)-1:] != "/" {
@@ -71,7 +72,12 @@ func parsePath(pathStr string) (*path, error) {
     }
 
     if newTokenKey {
+      if lastToken != nil && lastToken.isRecursive() && lastToken.isAny() {
+        currToken.keyMatcher.recursive = true
+        newPath.tokens = newPath.tokens[0:len(newPath.tokens)-1]
+      }
       newPath.tokens = append(newPath.tokens, currToken)
+      lastToken = currToken
       currToken = &pathToken{}
       processingKey = true
     }
@@ -93,12 +99,12 @@ func parsePath(pathStr string) (*path, error) {
 
 func matcherForTokenString(tokenStr string, isKey bool) (*tokenMatcher, error) {
   var err error
-  rangeRegexp := regexp.MustCompile("^(\\d+)\\\\\\.\\\\\\.(\\d+)$")
+  rangeRegexp := regexp.MustCompile("^(-?\\d+)\\\\\\.\\\\\\.(-?\\d+)$")
   digitMatches := rangeRegexp.FindAllStringSubmatch(tokenStr, -1)
   digits := []string{}
   if len(digitMatches) > 0 { digits = digitMatches[0] }
 
-  matcher := &tokenMatcher{}
+  matcher := &tokenMatcher{recursive: false}
 
   if len(digits) >= 3 {
     rStart, _ := strconv.ParseInt(digits[1], 10, 64)
@@ -112,7 +118,8 @@ func matcherForTokenString(tokenStr string, isKey bool) (*tokenMatcher, error) {
 
   } else if tokenStr == ".*.*" {
     if !isKey { return nil, errors.New("Invalid path value '**'. Use '\\*\\*' to match characters.") }
-    matcher.matcherType = recursiveMatcher
+    matcher.matcherType = anyMatcher
+    matcher.recursive = true
 
   } else if tokenStr == ".*" {
     matcher.matcherType = anyMatcher

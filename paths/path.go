@@ -46,7 +46,7 @@ func (t *pathToken) followParent() bool {
 }
 
 func (t *pathToken) isRecursive() bool {
-  return t.keyMatcher.matcherType == recursiveMatcher
+  return t.keyMatcher.recursive
 }
 
 func (t *pathToken) isAny() bool {
@@ -62,7 +62,6 @@ const (
   rangeMatcher 
   parentMatcher
   anyMatcher
-  recursiveMatcher
 )
 
 type tokenMatcher struct {
@@ -70,6 +69,7 @@ type tokenMatcher struct {
   rangeMatcher []int64
   intMatcher int64
   matcherType tokenMatcherType
+  recursive bool
 }
 
 func (tm *tokenMatcher) matches(value interface{}) bool {
@@ -87,7 +87,7 @@ func (tm *tokenMatcher) matches(value interface{}) bool {
     num = reflect.ValueOf(value).Convert(reflect.TypeOf(num)).Int()
     return tm.matchesInt(num)
   default:
-    return tm.regexpMatcher.MatchString(fmt.Sprintf("%s", value))
+    return tm.regexpMatcher != nil && tm.regexpMatcher.MatchString(fmt.Sprintf("%s", value))
   }
 }
 
