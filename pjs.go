@@ -4,13 +4,14 @@ import (
   "fmt"
   "flag"
   "os"
+  "strconv"
   "./paths"
 )
 
 
 type optionSet struct {
   color bool
-  indent int
+  indent uint
   paths []paths.Path
 }
 
@@ -24,12 +25,19 @@ func errorAndExit(code int, msg string, args ...interface{}) {
 
 func parseFlag() (*os.File, optionSet) {
   options := optionSet{}
-  noColor := false
+
+  colorEnv := os.Getenv("PJS_COLOR")
+  options.color = colorEnv != "false"
+
+  indentEnv, _ := strconv.ParseUint(os.Getenv("PJS_INDENT"), 10, 0)
+  if indentEnv <= 0 { indentEnv = 2 }
+  options.indent = uint(indentEnv)
+
   name := "pjs"
 
   flagset := flag.NewFlagSet(name, flag.ExitOnError)
-  flagset.BoolVar(&noColor, "nc", true, "\tDon't output colors")
-  flagset.IntVar(&options.indent, "i", 2, "\tIndent size")
+  flagset.BoolVar(&options.color, "c", options.color, "\tOutput in colors")
+  flagset.UintVar(&options.indent, "i", options.indent, "\tIndent size")
 
   flagset.Usage = func() {
     usage := `Pretty print and manipulate JSON data
@@ -51,8 +59,6 @@ Options:
   }
 
   flagset.Parse(os.Args[1:])
-
-  options.color = !noColor
 
   var err error
   var file *os.File
