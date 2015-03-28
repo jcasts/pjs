@@ -11,14 +11,7 @@ import (
 
 type Path interface {
   String() string
-  FindMatches(data interface{}) []PathMatch
-}
-
-type PathMatch interface {
-  ChildMatches() []PathMatch
-  Key() interface{}
-  Value() interface{}
-  //Primitive()
+  FindMatches(data interface{}) []*PathMatch
 }
 
 
@@ -31,36 +24,16 @@ func (p *path) String() string {
   return p.raw
 }
 
-func (p *path) FindMatches(data interface{}) []PathMatch {
+func (p *path) FindMatches(data interface{}) []*PathMatch {
   //TODO: Implement
   return nil
 }
 
-type pathMatch struct {
-  key interface{}
-  value interface{}
-  childMatches []*pathMatch
-  parentMatch *pathMatch
-}
-
-func newPathMatch(key, value interface{}, parent *pathMatch) *pathMatch {
-  return &pathMatch{key: key, value: value, parentMatch: parent, childMatches: []*pathMatch{}}
-}
-
-func (pm *pathMatch) ChildMatches() []PathMatch {
-  m := make([]PathMatch, len(pm.childMatches))
-  for i, c := range pm.childMatches {
-    m[i] = c
-  }
-  return m
-}
-
-func (pm *pathMatch) Key() interface{} {
-  return pm.key
-}
-
-func (pm *pathMatch) Value() interface{} {
-  return pm.value
+type PathMatch struct {
+  Key interface{}
+  Value interface{}
+  ChildMatches []*PathMatch
+  ParentMatch *PathMatch
 }
 
 

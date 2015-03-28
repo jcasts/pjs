@@ -4,14 +4,30 @@ import (
   "fmt"
   "errors"
   "reflect"
+  "sort"
 )
 
-func (p *path) matchData(data interface{}) (pathMatches []PathMatch) {
-  pathMatches = []PathMatch{}
+func (p *path) matchData(data interface{}) []*PathMatch {
+  if it, err := newDataIterator(data); err == nil {
+    return p.walkData(it, nil, 0)
+  }
+  return []*PathMatch{}
+}
 
-  it, err := newDataIterator(data)
-  for err != nil && it.Next() {
+func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepth int) (pathMatches []*PathMatch) {
+  if pathDepth >= len(p.tokens) { return nil }
+  token := p.tokens[pathDepth]
+  pathMatches = []*PathMatch{}
 
+  for it.Next() {
+    entry := it.Value()
+    if entry != nil && token.matches(entry.key, entry.value) {
+      match := &PathMatch{Key: entry.key, Value: entry.value, ParentMatch: parent}
+      if entry.iterator != nil {
+        match.ChildMatches = p.walkData(entry.iterator, match, pathDepth + 1)
+      }
+      pathMatches = append(pathMatches, match)
+    }
   }
 
   return
@@ -19,15 +35,27 @@ func (p *path) matchData(data interface{}) (pathMatches []PathMatch) {
 
 
 type dataEntry struct {
-  index int
-  name  string
-  value reflect.Value
+  index   int
+  name    string
+  key     interface{}
+  value   interface{}
+  iterator *dataIterator
 }
 
 type dataIterator struct {
   current   int
   keyCount  int
+  keys      []reflect.Value
   data      reflect.Value
+}
+
+type valueSorter []reflect.Value
+func (v valueSorter) Len() int { return len(v) }
+func (v valueSorter) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
+func (v valueSorter) Less(i, j int) bool {
+  v1 := fmt.Sprintf("%v", v[i].Interface())
+  v2 := fmt.Sprintf("%v", v[j].Interface())
+  return sort.StringsAreSorted([]string{v1, v2})
 }
 
 func newDataIterator(data interface{}) (d *dataIterator, err error) {
@@ -40,47 +68,59 @@ func newDataIterator(data interface{}) (d *dataIterator, err error) {
 
   switch d.data.Kind() {
   case reflect.Struct:
-    d.keyCount = d.data.Len()
+    d.keys = []reflect.Value{}
+    for i := 0; i < d.data.NumField(); i++ {
+      if d.data.Field(i).CanInterface() {
+        d.keys = append(d.keys, reflect.ValueOf(d.data.Type().Field(i).Name))
+      }
+    }
+    d.keyCount = len(d.keys)
+    sort.Sort(valueSorter(d.keys))
   case reflect.Map:
-    d.keyCount = len(d.data.MapKeys())
+    d.keys = d.data.MapKeys()
+    d.keyCount = len(d.keys)
+    sort.Sort(valueSorter(d.keys))
   case reflect.Slice, reflect.Array:
-    d.keyCount = d.data.NumField()
+    d.keyCount = d.data.Len()
   default:
     // Not a traversable structure
-    err = errors.New(fmt.Sprintf("Non-traversable data structure %v", data))
+    err = errors.New(fmt.Sprintf("Non-iteratable data structure %v", data))
+    d = nil
   }
   return
 }
 
 func (d *dataIterator) Next() bool {
   d.current++
-  if d.data.Kind() == reflect.Struct {
-    for d.data.Type().Field(d.current).Anonymous && d.current < d.keyCount {
-      d.current++
-    }
-  }
-  return d.current >= d.keyCount
+  return d.current < d.keyCount
 }
 
 func (d *dataIterator) Value() (de *dataEntry) {
+  if d.current >= d.keyCount { return nil }
   de = &dataEntry{index: d.current}
 
   switch d.data.Kind() {
   case reflect.Struct:
-    // Anonymous fields are skipped in the Next() method
-    de.name = d.data.Type().Field(d.current).Name
-    de.value = d.data.Field(d.current)
+    // Private fields are skipped in the constructor function
+    key := d.keys[d.current]
+    de.name = fmt.Sprintf("%v", key.Interface())
+    de.key = de.name
+    de.value = d.data.FieldByName(de.name).Interface()
   case reflect.Map:
-    key := d.data.MapKeys()[d.current]
     // This is build specifically for JSON which can't have
     // anything other than strings as a map key
+    key := d.keys[d.current]
     de.name = fmt.Sprintf("%v", key.Interface())
-    de.value = d.data.MapIndex(key)
+    de.key = de.name
+    de.value = d.data.MapIndex(key).Interface()
   case reflect.Slice, reflect.Array:
-    de.value = d.data.Index(d.current)
+    de.value = d.data.Index(d.current).Interface()
+    de.key = d.current
   default:
     // Not a traversable structure
     return nil
   }
+
+  de.iterator, _ = newDataIterator(de.value)
   return
 }
