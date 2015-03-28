@@ -4,32 +4,6 @@ import (
   "testing"
 )
 
-func testAssertEqual(t *testing.T, v1, v2 interface{}) {
-  if v1 != v2 { t.Fatalf("Expected %v but was %v", v1, v2) }
-}
-
-func testAssertTrue(t *testing.T, value bool) {
-  if !value { t.Fatalf("Expected value to be true") }
-}
-
-func testAssertFalse(t *testing.T, value bool) {
-  if value { t.Fatalf("Expected value to be false") }
-}
-
-func testAssertNil(t *testing.T, value interface{}) {
-  if value != nil { t.Fatalf("Expected value to be nil") }
-}
-
-func testAssertNotNil(t *testing.T, value interface{}) {
-  if value == nil { t.Fatalf("Expected value to be not nil") }
-}
-
-func testParsePath(t *testing.T, pStr string) *path {
-  p, err := parsePath(pStr)
-  testAssertNil(t, err)
-  return p
-}
-
 func TestParseInvalid(t *testing.T) {
   var err error
   _, err = parsePath("")
@@ -52,6 +26,7 @@ func TestParseInvalid(t *testing.T) {
 func TestParseAny(t *testing.T) {
   p := testParsePath(t, "foo/*/bar")
   testAssertEqual(t, 3, len(p.tokens))
+  testAssertEqual(t, "foo/*/bar", p.String())
   testAssertTrue(t, p.tokens[0].matches("foo", nil))
   testAssertFalse(t, p.tokens[0].matches("fo", nil))
   testAssertTrue(t, p.tokens[1].matches(1, nil))
