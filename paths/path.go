@@ -9,7 +9,7 @@ import (
 
 type Path interface {
   String() string
-  FindMatches(data interface{}) []*PathMatch
+  FindMatches(data interface{}) PathMatches
 }
 
 
@@ -22,17 +22,17 @@ func (p *path) String() string {
   return p.raw
 }
 
-func (p *path) FindMatches(data interface{}) []*PathMatch {
+func (p *path) FindMatches(data interface{}) PathMatches {
   if it, err := newDataIterator(data); err == nil {
     return p.walkData(it, nil, 0)
   }
-  return []*PathMatch{}
+  return PathMatches{}
 }
 
-func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepth int) (pathMatches []*PathMatch) {
+func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepth int) PathMatches {
   if pathDepth >= len(p.tokens) { return nil }
   token := p.tokens[pathDepth]
-  pathMatches = []*PathMatch{}
+  pathMatches := PathMatches{}
 
   for it.Next() {
     entry := it.Value()
@@ -47,15 +47,25 @@ func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepth int) (pat
     }
   }
 
-  return
+  return pathMatches
 }
+
+type PathMatches []*PathMatch
+
+//func (ps PathMatches) MarshalJSON() ([]byte, error) {
+
+//}
 
 type PathMatch struct {
   Key interface{}
   Value interface{}
-  ChildMatches []*PathMatch
+  ChildMatches PathMatches
   ParentMatch *PathMatch
 }
+
+//func (pm *PathMatch) MarshalJSON() ([]byte, error) {
+  
+//}
 
 
 type pathToken struct {

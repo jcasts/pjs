@@ -1,10 +1,15 @@
 package main
 
 import (
+  "bufio"
+  "bytes"
   "fmt"
   "flag"
+  "io"
+  "encoding/json"
   "os"
   "strconv"
+  "strings"
   "./paths"
 )
 
@@ -104,5 +109,44 @@ Options:
 func main() {
   input, options := parseFlag()
   defer input.Close()
-  fmt.Printf("%v\n", options)
+
+  if !options.color && len(options.paths) == 0 {
+    processInput(input, strings.Repeat(" ", int(options.indent)))
+  } else {
+
+  }
+  os.Stdout.WriteString("\n")
+}
+
+
+func processInput(fn *os.File, indent string) {
+  bufIn := bufio.NewReader(fn)
+  arr := make([]byte, 0, 1024*1024)
+  buf := bytes.NewBuffer(arr)
+  lineNum := int64(1)
+  for {
+    lastLine, err := bufIn.ReadBytes('\n')
+    if err != nil && err != io.EOF {
+      errorAndExit(3, err.Error())
+      return
+    }
+
+    if err == io.EOF && len(lastLine) == 0 {
+      break
+    }
+
+    jsErr := json.Indent(buf, lastLine, "", indent)
+    if jsErr != nil {
+      errorAndExit(2, "Malformed JSON on line %d", lineNum)
+      return
+    }
+    os.Stdout.Write(buf.Bytes())
+
+    buf.Reset()
+    lineNum += 1
+
+    if err == io.EOF {
+      break
+    }
+  }
 }
