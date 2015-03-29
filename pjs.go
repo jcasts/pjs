@@ -110,11 +110,26 @@ func main() {
   input, options := parseFlag()
   defer input.Close()
 
-  if !options.color && len(options.paths) == 0 {
-    processInput(input, strings.Repeat(" ", int(options.indent)))
-  } else {
+  indent := strings.Repeat(" ", int(options.indent))
+  fmt.Println(indent)
 
+  // if !options.color && len(options.paths) == 0 {
+  //   // TODO: This doesn't order keys by alpha :(
+  //   processInput(input, strings.Repeat(" ", int(options.indent)))
+  // } else {
+
+  // }
+  dec := json.NewDecoder(input)
+  for {
+    var js interface{}
+    if err := dec.Decode(&js); err == io.EOF {
+      break
+    } else if err != nil {
+      errorAndExit(2, err.Error())
+    }
+    fmt.Printf("%v\n", js)
   }
+
   os.Stdout.WriteString("\n")
 }
 
