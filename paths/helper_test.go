@@ -29,3 +29,48 @@ func testParsePath(t *testing.T, pStr string) *path {
   testAssertNil(t, err)
   return p
 }
+
+
+type address struct {
+  Street string
+  Zip string
+  City string
+}
+
+type person struct {
+  Name string
+  Age int
+  password string
+  Address *address
+}
+
+func mockStructData() *person {
+  addr := &address{Street: "1 Infinite Loop", Zip: "91234", City: "Cupertino"}
+  return &person{Name: "Bob", Age: 30, Address: addr, password: "iloveu"}
+}
+
+func mockMapData() map[string]interface{} {
+  return map[string]interface{}{
+    "name": "Bob",
+    "age": 30,
+    "password": "iloveu",
+    "address": map[string]interface{}{
+      "street": "1 Infinite Loop",
+      "city": "Cupertino",
+      "zip": "91234",
+    },
+  }
+}
+
+func mockSliceData() []interface{} {
+  return []interface{}{
+    "Bob",
+    30,
+    "iloveu",
+    []interface{}{
+      "1 Infinite Loop",
+      "cupertino",
+      "91234",
+    },
+  }
+}

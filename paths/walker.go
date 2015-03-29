@@ -7,32 +7,6 @@ import (
   "sort"
 )
 
-func (p *path) matchData(data interface{}) []*PathMatch {
-  if it, err := newDataIterator(data); err == nil {
-    return p.walkData(it, nil, 0)
-  }
-  return []*PathMatch{}
-}
-
-func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepth int) (pathMatches []*PathMatch) {
-  if pathDepth >= len(p.tokens) { return nil }
-  token := p.tokens[pathDepth]
-  pathMatches = []*PathMatch{}
-
-  for it.Next() {
-    entry := it.Value()
-    if entry != nil && token.matches(entry.key, entry.value) {
-      match := &PathMatch{Key: entry.key, Value: entry.value, ParentMatch: parent}
-      if entry.iterator != nil {
-        match.ChildMatches = p.walkData(entry.iterator, match, pathDepth + 1)
-      }
-      pathMatches = append(pathMatches, match)
-    }
-  }
-
-  return
-}
-
 
 type dataEntry struct {
   index   int
