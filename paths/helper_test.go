@@ -58,7 +58,9 @@ func mockMapData() map[string]interface{} {
       "street": "1 Infinite Loop",
       "city": "Cupertino",
       "zip": "91234",
+      "pos": []string{"Apple", "HQ"},
     },
+    "roles": []string{"eng", "employee"},
   }
 }
 

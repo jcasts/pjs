@@ -64,6 +64,10 @@ func newDataIterator(data interface{}) (d *dataIterator, err error) {
   return
 }
 
+func (d *dataIterator) Reset() {
+  d.current = -1
+}
+
 func (d *dataIterator) Next() bool {
   d.current++
   return d.current < d.keyCount

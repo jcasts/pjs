@@ -24,12 +24,16 @@ func (p *path) String() string {
 
 func (p *path) FindMatches(data interface{}) PathMatches {
   if it, err := newDataIterator(data); err == nil {
-    return p.walkData(it, nil, 0)
+    pathDepth := 0
+    return p.walkData(it, nil, &pathDepth)
   }
   return PathMatches{}
 }
 
-func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepth int) PathMatches {
+func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepthPtr *int) PathMatches {
+  pathDepth := *pathDepthPtr
+  *pathDepthPtr++
+
   if pathDepth >= len(p.tokens) { return nil }
   token := p.tokens[pathDepth]
   pathMatches := PathMatches{}
@@ -39,8 +43,33 @@ func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepth int) Path
     if entry != nil && token.matches(entry.key, entry.value) {
       match := &PathMatch{Key: entry.key, Value: entry.value, ParentMatch: parent}
       if entry.iterator != nil {
-        match.ChildMatches = p.walkData(entry.iterator, match, pathDepth + 1)
+        match.ChildMatches = p.walkData(entry.iterator, match, pathDepthPtr)
       }
+
+      // Should we hand execution back to parent?
+      if *pathDepthPtr < len(p.tokens) && p.tokens[*pathDepthPtr].followParent() {
+        *pathDepthPtr++
+        return pathMatches
+      }
+
+      // Do we need to restart matching do to following parents?
+      if *pathDepthPtr-1 < len(p.tokens) && p.tokens[*pathDepthPtr-1].followParent() {
+        if *pathDepthPtr < len(p.tokens) {
+          // We have a new key to match on
+          pathDepth = *pathDepthPtr
+          *pathDepthPtr++
+          token = p.tokens[pathDepth]
+          pathMatches = PathMatches{}
+          it.Reset()
+          continue
+        } else {
+          // We ended on a parent matcher
+          *pathDepthPtr = pathDepth + 1
+          pathMatches = append(pathMatches, match)
+          continue
+        }
+      }
+
       if len(match.ChildMatches) > 0 || pathDepth == len(p.tokens) - 1 {
         pathMatches = append(pathMatches, match)
       }

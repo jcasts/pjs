@@ -74,6 +74,14 @@ func TestDataIteratorMap(t *testing.T) {
   testAssertEqual(t, "iloveu", val.value)
   testAssertTrue(t, val.iterator == nil)
 
+  testAssertTrue(t, it.Next())
+  val = it.Value()
+  testAssertEqual(t, 4, val.index)
+  testAssertEqual(t, "roles", val.name)
+  testAssertEqual(t, "roles", val.key)
+  testAssertEqual(t, reflect.TypeOf([]string{}), reflect.TypeOf(val.value))
+  testAssertTrue(t, val.iterator != nil)
+
   testAssertFalse(t, it.Next())
   testAssertTrue(t, it.Value() == nil)
 }

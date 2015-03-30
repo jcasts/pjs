@@ -72,7 +72,7 @@ func parsePath(pathStr string) (*path, error) {
     }
 
     if newTokenKey {
-      if lastToken != nil && lastToken.isRecursive() && lastToken.isAny() {
+      if lastToken != nil && lastToken.isRecursive() && (lastToken.isAny() || lastToken.followParent()) {
         currToken.keyMatcher.recursive = true
         newPath.tokens = newPath.tokens[0:len(newPath.tokens)-1]
       }
