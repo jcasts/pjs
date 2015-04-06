@@ -31,7 +31,6 @@ func (v valueSorter) Less(i, j int) bool {
   return sort.StringsAreSorted([]string{v1, v2})
 }
 
-// TODO: Support anonymous/embedded fields
 func newDataIterator(data interface{}) (d *dataIterator, err error) {
   val := reflect.ValueOf(data)
   if val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface {
