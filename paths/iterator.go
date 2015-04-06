@@ -31,6 +31,7 @@ func (v valueSorter) Less(i, j int) bool {
   return sort.StringsAreSorted([]string{v1, v2})
 }
 
+// TODO: Support anonymous/embedded fields
 func newDataIterator(data interface{}) (d *dataIterator, err error) {
   val := reflect.ValueOf(data)
   if val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface {
@@ -41,12 +42,7 @@ func newDataIterator(data interface{}) (d *dataIterator, err error) {
 
   switch d.data.Kind() {
   case reflect.Struct:
-    d.keys = []reflect.Value{}
-    for i := 0; i < d.data.NumField(); i++ {
-      if d.data.Field(i).CanInterface() {
-        d.keys = append(d.keys, reflect.ValueOf(d.data.Type().Field(i).Name))
-      }
-    }
+    d.keys = deepGetStructFields(data)
     d.keyCount = len(d.keys)
     sort.Sort(valueSorter(d.keys))
   case reflect.Map:
@@ -60,6 +56,28 @@ func newDataIterator(data interface{}) (d *dataIterator, err error) {
     err = errors.New(fmt.Sprintf("Non-iteratable data structure %v", data))
     d = nil
   }
+  return
+}
+
+func deepGetStructFields(data interface{}) (fieldValues []reflect.Value) {
+  fieldValues = []reflect.Value{}
+  val := reflect.ValueOf(data)
+  if val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface {
+    val = val.Elem()
+  }
+
+  if val.Kind() != reflect.Struct { return }
+
+  for i := 0; i < val.NumField(); i++ {
+    if val.Field(i).CanInterface() {
+      if val.Type().Field(i).Anonymous {
+        fieldValues = append(fieldValues, deepGetStructFields(val.Field(i).Interface())...)
+      } else {
+        fieldValues = append(fieldValues, reflect.ValueOf(val.Type().Field(i).Name))
+      }
+    }
+  }
+
   return
 }
 
