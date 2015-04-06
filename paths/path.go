@@ -1,6 +1,7 @@
 package paths
 
 import (
+  "encoding/json"
   "fmt"
   "regexp"
   "reflect"
@@ -86,13 +87,25 @@ func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) 
   return
 }
 
+type sortedMap map[string]interface{}
+
+func (m sortedMap) MarshalJSON() (bytes []byte, err error) {
+  bytes = []byte{}
+  // TODO
+
+  return
+}
+
 type PathMatches []PathMatch
 
-/*
-//func (pms PathMatches) MarshalJSON() ([]byte, error) {
-  
-//}
-*/
+func (pms PathMatches) MarshalJSON() (bytes []byte, err error) {
+  return json.Marshal(pms.buildJsonStruct())
+}
+
+func (pms PathMatches) buildJsonStruct() interface{} {
+  // TODO
+  return nil
+}
 
 type PathMatch struct {
   nodes []*DataNode

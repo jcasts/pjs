@@ -13,7 +13,6 @@ type dataEntry struct {
   name    string
   key     interface{}
   value   interface{}
-  iterator *dataIterator
 }
 
 type dataIterator struct {
@@ -98,7 +97,5 @@ func (d *dataIterator) Value() (de *dataEntry) {
     // Not a traversable structure
     return nil
   }
-
-  de.iterator, _ = newDataIterator(de.value)
   return
 }
