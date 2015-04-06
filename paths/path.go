@@ -4,6 +4,7 @@ import (
   "fmt"
   "regexp"
   "reflect"
+  "strings"
 )
 
 
@@ -22,80 +23,138 @@ func (p *path) String() string {
   return p.raw
 }
 
-func (p *path) FindMatches(data interface{}) PathMatches {
-  if it, err := newDataIterator(data); err == nil {
-    pathDepth := 0
-    return p.walkData(it, nil, &pathDepth)
+func (p *path) FindMatches(data interface{}) (matchSets PathMatches) {
+  matchKeys := []string{""}
+  uniqMatchSets := map[string]PathMatch{"": NewPathMatch(data)}
+  for _, token := range p.tokens {
+    newMatchKeys := []string{}
+    newMatchSets := map[string]PathMatch{}
+    for _, key := range matchKeys {
+      matchSet := uniqMatchSets[key]
+      results := matchPathToken(token, matchSet)
+      for _, pathMatch := range results {
+        newKey := pathMatch.hashId()
+        if _, ok := newMatchSets[newKey]; !ok {
+          newMatchKeys = append(newMatchKeys, newKey)
+        }
+        newMatchSets[newKey] = pathMatch
+      }
+    }
+    matchKeys = newMatchKeys
+    uniqMatchSets = newMatchSets
+    if len(uniqMatchSets) == 0 { return }
   }
-  return PathMatches{}
+
+  matchSets = []PathMatch{}
+  for _, key := range matchKeys {
+    matchSets = append(matchSets, uniqMatchSets[key])
+  }
+  return
 }
 
-func (p *path) walkData(it *dataIterator, parent *PathMatch, pathDepthPtr *int) PathMatches {
-  pathDepth := *pathDepthPtr
-  *pathDepthPtr++
+func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) {
+  dataSets = []PathMatch{}
+  if dataSet.Length() == 0 { return }
 
-  if pathDepth >= len(p.tokens) { return nil }
-  token := p.tokens[pathDepth]
-  pathMatches := PathMatches{}
+  if token.followParent() {
+    dataSets = append(dataSets, dataSet.CopyAndTrim(1))
+    return
+  }
 
+  it, err := newDataIterator(dataSet.Value())
+  if err != nil { return }
+
+  // Handle matching, recursion
   for it.Next() {
     entry := it.Value()
-    if entry != nil && token.matches(entry.key, entry.value) {
-      match := &PathMatch{Key: entry.key, Value: entry.value, ParentMatch: parent}
-      if entry.iterator != nil {
-        match.ChildMatches = p.walkData(entry.iterator, match, pathDepthPtr)
+    if entry == nil { continue }
+
+    if token.matches(entry.key, entry.value) {
+      var lastDataSet PathMatch
+      if (len(dataSets) > 0) { lastDataSet = dataSets[len(dataSets)-1] }
+      newDataSet := dataSet.CopyAndAppend(entry.key, entry.value)
+      if &lastDataSet == nil || !lastDataSet.Equals(newDataSet) {
+        dataSets = append(dataSets, newDataSet)
       }
 
-      // Should we hand execution back to parent?
-      if *pathDepthPtr < len(p.tokens) && p.tokens[*pathDepthPtr].followParent() {
-        *pathDepthPtr++
-        return pathMatches
-      }
-
-      // Do we need to restart matching do to following parents?
-      if *pathDepthPtr-1 < len(p.tokens) && p.tokens[*pathDepthPtr-1].followParent() {
-        if *pathDepthPtr < len(p.tokens) {
-          // We have a new key to match on
-          pathDepth = *pathDepthPtr
-          *pathDepthPtr++
-          token = p.tokens[pathDepth]
-          pathMatches = PathMatches{}
-          it.Reset()
-          continue
-        } else {
-          // We ended on a parent matcher
-          *pathDepthPtr = pathDepth + 1
-          pathMatches = append(pathMatches, match)
-          continue
-        }
-      }
-
-      if len(match.ChildMatches) > 0 || pathDepth == len(p.tokens) - 1 {
-        pathMatches = append(pathMatches, match)
-      }
+    } else if token.isRecursive() {
+      newDataSet := dataSet.CopyAndAppend(entry.key, entry.value)
+      dataSets = append(dataSets, matchPathToken(token, newDataSet)...)
     }
   }
 
-  return pathMatches
+  return
 }
 
-type PathMatches []*PathMatch
+type PathMatches []PathMatch
 
-//func (ps PathMatches) MarshalJSON() ([]byte, error) {
-
-//}
-
-type PathMatch struct {
-  Key interface{}
-  Value interface{}
-  ChildMatches PathMatches
-  ParentMatch *PathMatch
-}
-
-//func (pm *PathMatch) MarshalJSON() ([]byte, error) {
+/*
+//func (pms PathMatches) MarshalJSON() ([]byte, error) {
   
 //}
+*/
 
+type PathMatch struct {
+  nodes []*DataNode
+  hashes []string
+}
+
+func (pm PathMatch) hashId() string {
+  return strings.Join(pm.hashes, ":")
+}
+
+func (pm PathMatch) Length() int {
+  return len(pm.nodes)
+}
+
+func (pm PathMatch) NodeAt(index int) *DataNode {
+  return pm.nodes[index]
+}
+
+func (pm PathMatch) CopyAndTrim(rmSize int) PathMatch {
+  length := pm.Length() - rmSize
+  if (length <= 0) { length = 1}
+  return PathMatch{
+    nodes: pm.nodes[0:length],
+    hashes: pm.hashes[0:length],
+  }
+}
+
+func (pm PathMatch) CopyAndAppend(key, value interface{}) PathMatch {
+  node := &DataNode{Key: key, Value: value}
+  nodes := append([]*DataNode{}, pm.nodes...)
+  nodes = append(nodes, node)
+  hashes := append([]string{}, pm.hashes...)
+  hashes = append(hashes, fmt.Sprintf("%v", node.Key))
+  return PathMatch{
+    nodes: nodes,
+    hashes: hashes,
+  }
+}
+
+func (pm PathMatch) Equals(other PathMatch) bool {
+  return pm.hashId() == other.hashId()
+}
+
+func (pm PathMatch) Value() interface{} {
+  return pm.nodes[pm.Length()-1].Value
+}
+/*
+//func (pm PathMatch) MarshalJSON() ([]byte, error) {
+  
+//}
+*/
+func NewPathMatch(value interface{}) PathMatch {
+  return PathMatch{
+    nodes: []*DataNode{&DataNode{Value: value}},
+    hashes: []string{""},
+  }
+}
+
+type DataNode struct {
+  Key interface{}
+  Value interface{}
+}
 
 type pathToken struct {
   keyMatcher *tokenMatcher
@@ -167,13 +226,6 @@ func (tm *tokenMatcher) matchesInt(num int64) bool {
   } else {
     return false
   }
-}
-
-
-type dataNode struct {
-  parent *dataNode
-  key interface{}
-  value interface{}
 }
 
 
