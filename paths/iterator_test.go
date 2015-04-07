@@ -1,9 +1,26 @@
 package paths
 
 import (
+  "fmt"
   "reflect"
+  "sort"
   "testing"
 )
+
+type itValueSorter []reflect.Value
+func (v itValueSorter) Len() int { return len(v) }
+func (v itValueSorter) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
+func (v itValueSorter) Less(i, j int) bool {
+  v1 := fmt.Sprintf("%v", v[i].Interface())
+  v2 := fmt.Sprintf("%v", v[j].Interface())
+  return sort.StringsAreSorted([]string{v1, v2})
+}
+
+func newSortedDataIterator(data interface{}) (d *dataIterator, err error) {
+  d, err = newDataIterator(data)
+  if err == nil && len(d.keys) > 0 { sort.Sort(itValueSorter(d.keys)) }
+  return
+}
 
 type StructTest1 struct {
   MyField1 string
@@ -18,7 +35,7 @@ type StructTest2 struct {
 func TestDataIteratorEmbeddedStruct(t *testing.T) {
   data := StructTest2{StructTest1{"F1", "F2"}, "F0"}
 
-  it, err := newDataIterator(data)
+  it, err := newSortedDataIterator(data)
   testAssertNil(t, err)
 
   testAssertTrue(t, it.Next())
@@ -47,7 +64,7 @@ func TestDataIteratorEmbeddedStruct(t *testing.T) {
 }
 
 func TestDataIteratorStruct(t *testing.T) {
-  it, err := newDataIterator(mockStructData())
+  it, err := newSortedDataIterator(mockStructData())
   testAssertNil(t, err)
 
   testAssertTrue(t, it.Next())
@@ -76,7 +93,7 @@ func TestDataIteratorStruct(t *testing.T) {
 }
 
 func TestDataIteratorMap(t *testing.T) {
-  it, err := newDataIterator(mockMapData())
+  it, err := newSortedDataIterator(mockMapData())
   testAssertNil(t, err)
 
   testAssertTrue(t, it.Next())
@@ -119,7 +136,7 @@ func TestDataIteratorMap(t *testing.T) {
 }
 
 func TestDataIteratorSlice(t *testing.T) {
-  it, err := newDataIterator(mockSliceData())
+  it, err := newSortedDataIterator(mockSliceData())
   testAssertNil(t, err)
 
   testAssertTrue(t, it.Next())

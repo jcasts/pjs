@@ -4,7 +4,6 @@ import (
   "fmt"
   "errors"
   "reflect"
-  "sort"
 )
 
 
@@ -22,15 +21,6 @@ type dataIterator struct {
   data      reflect.Value
 }
 
-type valueSorter []reflect.Value
-func (v valueSorter) Len() int { return len(v) }
-func (v valueSorter) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
-func (v valueSorter) Less(i, j int) bool {
-  v1 := fmt.Sprintf("%v", v[i].Interface())
-  v2 := fmt.Sprintf("%v", v[j].Interface())
-  return sort.StringsAreSorted([]string{v1, v2})
-}
-
 func newDataIterator(data interface{}) (d *dataIterator, err error) {
   val := reflect.ValueOf(data)
   if val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface {
@@ -43,11 +33,9 @@ func newDataIterator(data interface{}) (d *dataIterator, err error) {
   case reflect.Struct:
     d.keys = deepGetStructFields(data)
     d.keyCount = len(d.keys)
-    sort.Sort(valueSorter(d.keys))
   case reflect.Map:
     d.keys = d.data.MapKeys()
     d.keyCount = len(d.keys)
-    sort.Sort(valueSorter(d.keys))
   case reflect.Slice, reflect.Array:
     d.keyCount = d.data.Len()
   default:
