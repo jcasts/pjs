@@ -14,10 +14,13 @@ type Path interface {
   FindMatches(data interface{}) PathMatches
 }
 
-
 type path struct {
   raw string
   tokens []*pathToken
+}
+
+func NewPath(pathStr string) (Path, error) {
+  return parsePath(pathStr)
 }
 
 func (p *path) String() string {
@@ -87,14 +90,6 @@ func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) 
   return
 }
 
-type sortedMap map[string]interface{}
-
-func (m sortedMap) MarshalJSON() (bytes []byte, err error) {
-  bytes = []byte{}
-  // TODO
-
-  return
-}
 
 type PathMatches []PathMatch
 
@@ -106,6 +101,7 @@ func (pms PathMatches) buildJsonStruct() interface{} {
   // TODO
   return nil
 }
+
 
 type PathMatch struct {
   nodes []*DataNode
@@ -152,11 +148,7 @@ func (pm PathMatch) Equals(other PathMatch) bool {
 func (pm PathMatch) Value() interface{} {
   return pm.nodes[pm.Length()-1].Value
 }
-/*
-//func (pm PathMatch) MarshalJSON() ([]byte, error) {
-  
-//}
-*/
+
 func NewPathMatch(value interface{}) PathMatch {
   return PathMatch{
     nodes: []*DataNode{&DataNode{Value: value}},
@@ -164,10 +156,12 @@ func NewPathMatch(value interface{}) PathMatch {
   }
 }
 
+
 type DataNode struct {
   Key interface{}
   Value interface{}
 }
+
 
 type pathToken struct {
   keyMatcher *tokenMatcher
@@ -239,9 +233,4 @@ func (tm *tokenMatcher) matchesInt(num int64) bool {
   } else {
     return false
   }
-}
-
-
-func NewPath(pathStr string) (Path, error) {
-  return parsePath(pathStr)
 }

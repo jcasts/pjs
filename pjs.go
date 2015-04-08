@@ -11,6 +11,7 @@ import (
   "strconv"
   "strings"
   "./paths"
+  "./jsonfmt"
 )
 
 
@@ -111,7 +112,15 @@ func main() {
   defer input.Close()
 
   indent := strings.Repeat(" ", int(options.indent))
-  fmt.Println(indent)
+  var formatter *jsonfmt.Formatter
+
+  if options.color {
+    formatter = jsonfmt.NewFormatter(
+      jsonfmt.NewConsoleColorProcessor(),
+      jsonfmt.NewIndentProcessor("", indent))
+  } else {
+    formatter = jsonfmt.NewFormatter(jsonfmt.NewIndentProcessor("", indent))
+  }
 
   // if !options.color && len(options.paths) == 0 {
   //   // TODO: This doesn't order keys by alpha :(
@@ -127,10 +136,14 @@ func main() {
     } else if err != nil {
       errorAndExit(2, err.Error())
     }
-    fmt.Printf("%v\n", js)
-  }
 
-  os.Stdout.WriteString("\n")
+    if len(options.paths) > 0 {
+      // TODO
+    } else {
+      formatter.Process(jsonfmt.NewOrderedEncoder(js), os.Stdout)
+    }
+    os.Stdout.WriteString("\n")
+  }
 }
 
 
