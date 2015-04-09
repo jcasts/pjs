@@ -1,8 +1,6 @@
 package main
 
 import (
-  "bufio"
-  "bytes"
   "fmt"
   "flag"
   "io"
@@ -122,12 +120,6 @@ func main() {
     formatter = jsonfmt.NewFormatter(jsonfmt.NewIndentProcessor("", indent))
   }
 
-  // if !options.color && len(options.paths) == 0 {
-  //   // TODO: This doesn't order keys by alpha :(
-  //   processInput(input, strings.Repeat(" ", int(options.indent)))
-  // } else {
-
-  // }
   dec := json.NewDecoder(input)
   for {
     var js interface{}
@@ -143,38 +135,5 @@ func main() {
       formatter.Process(jsonfmt.NewOrderedEncoder(js), os.Stdout)
     }
     os.Stdout.WriteString("\n")
-  }
-}
-
-
-func processInput(fn *os.File, indent string) {
-  bufIn := bufio.NewReader(fn)
-  arr := make([]byte, 0, 1024*1024)
-  buf := bytes.NewBuffer(arr)
-  lineNum := int64(1)
-  for {
-    lastLine, err := bufIn.ReadBytes('\n')
-    if err != nil && err != io.EOF {
-      errorAndExit(3, err.Error())
-      return
-    }
-
-    if err == io.EOF && len(lastLine) == 0 {
-      break
-    }
-
-    jsErr := json.Indent(buf, lastLine, "", indent)
-    if jsErr != nil {
-      errorAndExit(2, "Malformed JSON on line %d", lineNum)
-      return
-    }
-    os.Stdout.Write(buf.Bytes())
-
-    buf.Reset()
-    lineNum += 1
-
-    if err == io.EOF {
-      break
-    }
   }
 }
