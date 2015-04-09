@@ -185,9 +185,7 @@ func parseAny(s *Scanner, char rune) error {
       s.step = parseString
     case '-':
       s.step = parseNegNumber
-    case '0':
-      s.step = parseFloat0
-    case '1', '2', '3', '4', '5', '6', '7', '8', '9':
+    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
       s.step = parseNumber
     default:
       return parseError(char, AnyToken)
@@ -226,9 +224,7 @@ func parseArrayStart(s *Scanner, char rune) error {
 
 func parseNegNumber(s *Scanner, char rune) error {
   switch char {
-    case '0':
-      s.step = parseFloat0
-    case '1', '2', '3', '4', '5', '6', '7', '8', '9':
+    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
       s.step = parseNumber
     default:
       return parseError(char, IntegerLiteralToken)
@@ -250,6 +246,7 @@ func parseNumber(s *Scanner, char rune) error {
     case 'e', 'E':
       s.step = parseScientific0
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+      if s.value == "0" || s.value == "-0" { return parseFloat0(s, char) }
     default:
       return parseError(char, IntegerLiteralToken)
   }
@@ -325,10 +322,14 @@ func parseScientific2(s *Scanner, char rune) error {
 }
 
 func parseMapKey(s *Scanner, char rune) error {
-  if char == '"' && s.value == "" {
+  if s.value == "" { // Start of key
+    if isBlank(char) { return nil }
+    if char != '"' {
+      return parseError(char, MapKeyToken)
+    }
     s.value += string(char)
     return nil
-  } else if !s.inObjectType(scannerString) && s.value != "\"" {
+  } else if !s.inObjectType(scannerString) && s.value != "\"" { // End of key
     if isBlank(char) { return nil }
     s.bufferPos--
     s.finishWithTokenType(MapKeyToken)

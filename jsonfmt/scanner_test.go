@@ -1,7 +1,6 @@
 package jsonfmt
 
 import (
-  //"fmt"
   "io"
   "strings"
   "testing"
@@ -28,6 +27,16 @@ func TestInteger(t *testing.T) {
   testAssertTrue(t, scan.Next())
   testAssertEqual(t, io.EOF, scan.Error())
   testAssertToken(t, "-123", IntegerLiteralToken, 0, false, scan.Token())
+
+  scan = NewScanner(strings.NewReader("0"))
+  testAssertTrue(t, scan.Next())
+  testAssertEqual(t, io.EOF, scan.Error())
+  testAssertToken(t, "0", IntegerLiteralToken, 0, false, scan.Token())
+
+  scan = NewScanner(strings.NewReader("-0"))
+  testAssertTrue(t, scan.Next())
+  testAssertEqual(t, io.EOF, scan.Error())
+  testAssertToken(t, "-0", IntegerLiteralToken, 0, false, scan.Token())
 }
 
 func TestBadInteger(t *testing.T) {
@@ -496,9 +505,81 @@ func TestNestedMap(t *testing.T) {
 }
 
 func TestBadMap(t *testing.T) {
+  var scan *Scanner
 
+  scan = NewScanner(strings.NewReader("{\"test\":null,,\n \"foo\":123}"))
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "{", MapStartToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"test\"", MapKeyToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ":", MapColonToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "null", NullLiteralToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ",", ValueSeparatorToken, 1, false, scan.Token())
+  testAssertFalse(t, scan.Next())
+  testAssertEqual(t, "Unexpected character ',' in map key", scan.Error().Error())
+  testAssertTrue(t, scan.Token() == nil)
+
+  scan = NewScanner(strings.NewReader("{123: 456,\n \"foo\":123}"))
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "{", MapStartToken, 0, false, scan.Token())
+  testAssertFalse(t, scan.Next())
+  testAssertEqual(t, "Unexpected character '1' in map key", scan.Error().Error())
 }
 
 func TestMixedStream(t *testing.T) {
+  var scan *Scanner
 
+  scan = NewScanner(strings.NewReader("{\"test\":null, \"foo\":[ 1,\"baz\"]}\n[0, false]\n223 0"))
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "{", MapStartToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"test\"", MapKeyToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ":", MapColonToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "null", NullLiteralToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ",", ValueSeparatorToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"foo\"", MapKeyToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ":", MapColonToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "[", ArrayStartToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "1", IntegerLiteralToken, 2, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ",", ValueSeparatorToken, 2, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"baz\"", StringLiteralToken, 2, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "]", ArrayEndToken, 1, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "}", MapEndToken, 0, false, scan.Token())
+
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "", StartNewJsonToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "[", ArrayStartToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "0", IntegerLiteralToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ",", ValueSeparatorToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "false", BooleanLiteralToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "]", ArrayEndToken, 0, false, scan.Token())
+
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "", StartNewJsonToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "223", IntegerLiteralToken, 0, false, scan.Token())
+
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "", StartNewJsonToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "0", IntegerLiteralToken, 0, false, scan.Token())
 }
