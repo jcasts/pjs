@@ -328,7 +328,8 @@ func parseMapKey(s *Scanner, char rune) error {
   if char == '"' && s.value == "" {
     s.value += string(char)
     return nil
-  } else if !s.inObjectType(scannerString) && s.value != "" {
+  } else if !s.inObjectType(scannerString) && s.value != "\"" {
+    if isBlank(char) { return nil }
     s.bufferPos--
     s.finishWithTokenType(MapKeyToken)
     s.step = parseMapKeyAssign
@@ -344,6 +345,7 @@ func parseMapKeyAssign(s *Scanner, char rune) error {
   if char == ':' {
     s.value += string(char)
     s.finishWithTokenType(MapColonToken)
+    s.step = parseAny
     return nil
   }
   return parseError(char, MapColonToken)
