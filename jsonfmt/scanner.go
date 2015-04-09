@@ -9,7 +9,7 @@ type Token struct {
   Value string
   Type TokenType
   Depth int
-  InArray bool
+  InMap bool
 }
 
 type TokenType int
@@ -144,10 +144,8 @@ func (s *Scanner) popObjectType() {
 }
 
 func (s *Scanner) finishWithTokenType(tokenType TokenType) {
-  // TODO: Handle potential dangling EndOfValue chars by setting bufferPos back by one when necessary
-  // Handle trimming of s.dataTypes
   s.token = &Token{s.value, tokenType, len(s.dataTypes),
-        s.inObjectType(scannerArray)}
+        s.inObjectType(scannerMap)}
   s.step = parseNextInObject
 }
 

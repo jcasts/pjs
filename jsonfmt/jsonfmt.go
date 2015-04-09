@@ -91,10 +91,10 @@ func (p *indentProcessor) Handle(t Token) string {
   switch t.Type {
   case StringLiteralToken, IntegerLiteralToken, FloatLiteralToken,
         BooleanLiteralToken, NullLiteralToken, EmptyMapToken, EmptyArrayToken, MapStartToken, ArrayStartToken:
-    if t.InArray {
-      return p.indentToken(t)
-    } else {
+    if t.InMap {
       return t.Value
+    } else {
+      return p.indentToken(t)
     }
   case MapKeyToken:
     return p.indentToken(t)
