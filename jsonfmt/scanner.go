@@ -14,7 +14,8 @@ type Token struct {
 
 type TokenType int
 const (
-  StringLiteralToken TokenType = iota // "Foo"
+  AnyToken TokenType = iota
+  StringLiteralToken        // "Foo"
   IntegerLiteralToken       // 1234
   FloatLiteralToken         // 0.234
   ScientificLiteralToken    // 0.234E-2
@@ -38,6 +39,33 @@ const (
   scannerArray
   scannerString
 )
+
+func tokenTypeName(t TokenType) string {
+  switch t {
+    case StringLiteralToken:
+      return "string"
+    case IntegerLiteralToken:
+      return "integer"
+    case FloatLiteralToken:
+      return "float"
+    case ScientificLiteralToken:
+      return "scientific"
+    case BooleanLiteralToken:
+      return "boolean"
+    case NullLiteralToken:
+      return "null"
+    case MapKeyToken:
+      return "map key"
+    case MapStartToken, MapEndToken, MapColonToken, EmptyMapToken:
+      return "map"
+    case ArrayStartToken, ArrayEndToken, EmptyArrayToken:
+      return "array"
+    case ValueSeparatorToken:
+      return "data structure"
+    default:
+      return "JSON" 
+  }
+}
 
 
 const bufSize = 1024
@@ -69,18 +97,18 @@ func (s *Scanner) Error() error {
 }
 
 func (s *Scanner) Next() bool {
+  s.err = nil
   s.token = nil
   s.value = ""
 
   for s.token == nil {
-    if s.bufferPos >= s.bufferLen - 1 {
+    if s.bufferPos > s.bufferLen - 1 {
       var err error
       s.bufferLen, err = s.reader.Read(s.buffer)
       if err != nil {
+        s.err = err
         if err == io.EOF {
           s.step(s, ' ') // Force trigger unfinished last values
-        } else {
-          s.err = err
         }
         return s.token != nil
       }
@@ -102,6 +130,7 @@ func (s *Scanner) Next() bool {
 }
 
 func (s *Scanner) inObjectType(t scannerDataType) bool {
+  if  len(s.dataTypes) == 0 { return false }
   return s.dataTypes[len(s.dataTypes)-1] == t
 }
 
@@ -110,6 +139,7 @@ func (s *Scanner) addObjectType(t scannerDataType) {
 }
 
 func (s *Scanner) popObjectType() {
+  if len(s.dataTypes) == 0 { return }
   s.dataTypes = s.dataTypes[0:len(s.dataTypes)-1]
 }
 
@@ -126,15 +156,16 @@ func isBlank(char rune) bool {
 }
 
 func isTermination(char rune) bool {
-  return char == ',' || char == '}' || char == ']' // TODO
+  return char == ',' || char == '}' || char == ']'
 }
 
 func isEndOfValue(char rune) bool {
-  return isBlank(char) || isTermination(char) // TODO: Make sure we're in a map or array
+  return isBlank(char) || isTermination(char)
 }
 
-func parseError() error {
-  return errors.New("Unexpected character while reading JSON")
+func parseError(char rune, t TokenType) error {
+  msg := "Unexpected character '"+string(char)+"' in "+tokenTypeName(t)
+  return errors.New(msg)
 }
 
 func parseAny(s *Scanner, char rune) error {
@@ -159,7 +190,7 @@ func parseAny(s *Scanner, char rune) error {
     case '1', '2', '3', '4', '5', '6', '7', '8', '9':
       s.step = parseNumber
     default:
-      return parseError()
+      return parseError(char, AnyToken)
   }
   s.value += string(char)
   return nil
@@ -172,8 +203,8 @@ func parseMapStart(s *Scanner, char rune) error {
     s.finishWithTokenType(EmptyMapToken)
   } else {
     s.bufferPos--
-    s.addObjectType(scannerMap)
     s.finishWithTokenType(MapStartToken)
+    s.addObjectType(scannerMap)
     s.step = parseMapKey
   }
   return nil
@@ -186,8 +217,9 @@ func parseArrayStart(s *Scanner, char rune) error {
     s.finishWithTokenType(EmptyArrayToken)
   } else {
     s.bufferPos--
-    s.addObjectType(scannerArray)
     s.finishWithTokenType(ArrayStartToken)
+    s.addObjectType(scannerArray)
+    s.step = parseAny
   }
   return nil
 }
@@ -199,7 +231,7 @@ func parseNegNumber(s *Scanner, char rune) error {
     case '1', '2', '3', '4', '5', '6', '7', '8', '9':
       s.step = parseNumber
     default:
-      return parseError()
+      return parseError(char, IntegerLiteralToken)
   }
   s.value += string(char)
   return nil
@@ -219,7 +251,7 @@ func parseNumber(s *Scanner, char rune) error {
       s.step = parseScientific0
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
     default:
-      return parseError()
+      return parseError(char, IntegerLiteralToken)
   }
   s.value += string(char)
   return nil
@@ -229,7 +261,7 @@ func parseFloat0(s *Scanner, char rune) error {
   if char == '.' {
     s.step = parseFloat1
   } else {
-    return parseError()
+    return parseError(char, FloatLiteralToken)
   }
   s.value += string(char)
   return nil
@@ -240,7 +272,7 @@ func parseFloat1(s *Scanner, char rune) error {
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
       s.step = parseFloat2
     default:
-      return parseError()
+      return parseError(char, FloatLiteralToken)
   }
   s.value += string(char)
   return nil
@@ -252,6 +284,7 @@ func parseFloat2(s *Scanner, char rune) error {
     s.finishWithTokenType(FloatLiteralToken)
     return nil
   } else if char == 'e' || char == 'E' {
+    s.value += string(char)
     s.step = parseScientific0
     return nil
   }
@@ -265,7 +298,7 @@ func parseScientific0(s *Scanner, char rune) error {
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
       s.step = parseScientific2
     default:
-      return parseError()
+      return parseError(char, ScientificLiteralToken)
   }
   s.value += string(char)
   return nil
@@ -276,7 +309,7 @@ func parseScientific1(s *Scanner, char rune) error {
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
       s.step = parseScientific2
     default:
-      return parseError()
+      return parseError(char, ScientificLiteralToken)
   }
   s.value += string(char)
   return nil
@@ -301,7 +334,7 @@ func parseMapKey(s *Scanner, char rune) error {
     s.step = parseMapKeyAssign
     return nil
   } else if s.value == "" {
-    return parseError()
+    return parseError(char, MapKeyToken)
   }
   return parseString(s, char)
 }
@@ -313,7 +346,7 @@ func parseMapKeyAssign(s *Scanner, char rune) error {
     s.finishWithTokenType(MapColonToken)
     return nil
   }
-  return parseError()
+  return parseError(char, MapColonToken)
 }
 
 func parseNextInObject(s *Scanner, char rune) error {
@@ -334,34 +367,41 @@ func parseNextInObject(s *Scanner, char rune) error {
     s.popObjectType()
     s.finishWithTokenType(ArrayEndToken)
     s.step = parseNextInObject
+    return nil
   } else if char == '}' && s.inObjectType(scannerMap) {
     // End of map
     s.value += string(char)
     s.popObjectType()
     s.finishWithTokenType(MapEndToken)
     s.step = parseNextInObject
+    return nil
   } else if len(s.dataTypes) == 0 && !isTermination(char) {
     // End of JSON
     s.bufferPos--
     s.finishWithTokenType(StartNewJsonToken)
     s.step = parseAny
+    return nil
   }
-  return parseError()
+  return parseError(char, ValueSeparatorToken)
 }
 
 func parseString(s *Scanner, char rune) error {
   inString := s.inObjectType(scannerString)
-  if !inString && isEndOfValue(char) {
-    s.bufferPos--
-    s.finishWithTokenType(StringLiteralToken)
-    return nil
+  if !inString {
+    if isEndOfValue(char) {
+      s.bufferPos--
+      s.finishWithTokenType(StringLiteralToken)
+      return nil
+    } else if s.value != "\"" {
+      return parseError(char, StringLiteralToken)
+    }
   }
 
   s.value += string(char)
 
   if char == '"' && !s.inStringEsc && inString {
     s.popObjectType()
-  } else {
+  } else if !inString {
     s.addObjectType(scannerString)
   }
 
@@ -386,7 +426,7 @@ func parseFalse(s *Scanner, char rune) error {
   } else if char == 'e' && s.value == "fals" {
     s.value += string(char)
   } else {
-    return parseError()
+    return parseError(char, BooleanLiteralToken)
   }
   return nil
 }
@@ -404,7 +444,7 @@ func parseTrue(s *Scanner, char rune) error {
   } else if char == 'e' && s.value == "tru" {
     s.value += string(char)
   } else {
-    return parseError()
+    return parseError(char, BooleanLiteralToken)
   }
   return nil
 }
@@ -422,7 +462,7 @@ func parseNull(s *Scanner, char rune) error {
   } else if char == 'l' && s.value == "nul" {
     s.value += string(char)
   } else {
-    return parseError()
+    return parseError(char, NullLiteralToken)
   }
   return nil
 }
