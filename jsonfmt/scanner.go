@@ -1,8 +1,10 @@
 package jsonfmt
 
 import (
+  "fmt"
   "errors"
   "io"
+  "unicode/utf8"
 )
 
 type Token struct {
@@ -80,12 +82,14 @@ type Scanner struct {
   err error
   dataTypes []scannerDataType
   value string
-  inStringEsc bool
   step stepFunc
+  ignoreConsoleChars bool
 }
 
 func NewScanner(r io.Reader) *Scanner {
-  return &Scanner{make([]byte, bufSize), 0, 0, r, nil, nil, []scannerDataType{}, "", false, parseAny}
+  s := &Scanner{make([]byte, bufSize), 0, 0, r, nil, nil, []scannerDataType{}, "", nil, true}
+  s.setStep(parseAny)
+  return s
 }
 
 func (s *Scanner) Token() *Token {
@@ -100,11 +104,14 @@ func (s *Scanner) Next() bool {
   s.err = nil
   s.token = nil
   s.value = ""
+  runeBuffer := []byte{}
+  runeError := false
 
   for s.token == nil {
-    if s.bufferPos > s.bufferLen - 1 {
+    if s.bufferPos > s.bufferLen - 1 || runeError {
       var err error
       s.bufferLen, err = s.reader.Read(s.buffer)
+      s.bufferPos = 0
       if err != nil {
         s.err = err
         if err == io.EOF {
@@ -114,10 +121,32 @@ func (s *Scanner) Next() bool {
       }
     }
 
-    for i := s.bufferPos; i < s.bufferLen; i++ {
-      s.bufferPos++
-      b := s.buffer[i]
-      err := s.step(s, rune(int(b)))
+    lastRuneLen := 0
+    posDiff := len(runeBuffer)
+    index := s.bufferPos
+    if index < 0 { index = 0 }
+    runeBuffer = append(runeBuffer, s.buffer[index:s.bufferLen]...)
+    s.bufferPos -= posDiff
+
+    for i := s.bufferPos; i < s.bufferLen; i+=lastRuneLen {
+      var char rune
+      runeError = false
+      char, lastRuneLen = utf8.DecodeRune(runeBuffer)
+
+      if char == utf8.RuneError {
+        runeError = true
+        if len(runeBuffer) >= 8 {
+          s.err = errors.New(fmt.Sprintf("Unparsable UTF-8: %v", runeBuffer))
+          return false
+        } else {
+          break
+        }
+      }
+      s.bufferPos += lastRuneLen
+      runeBuffer = runeBuffer[lastRuneLen:len(runeBuffer)]
+
+      err := s.step(s, char)
+
       if err != nil {
         s.err = err
         return false
@@ -143,10 +172,42 @@ func (s *Scanner) popObjectType() {
   s.dataTypes = s.dataTypes[0:len(s.dataTypes)-1]
 }
 
+func (s *Scanner) setStep(fn stepFunc) {
+  s.step = func(s *Scanner, char rune) error {
+    if checkParseConsoleEsc(s, char, fn) { return nil }
+    return fn(s, char)
+  }
+}
+
 func (s *Scanner) finishWithTokenType(tokenType TokenType) {
   s.token = &Token{s.value, tokenType, len(s.dataTypes),
         s.inObjectType(scannerMap)}
-  s.step = parseNextInObject
+  s.setStep(parseNextInObject)
+}
+
+func checkParseConsoleEsc(s *Scanner, char rune, next stepFunc) bool {
+  if char != '\033' || !s.ignoreConsoleChars { return false }
+
+  fn1 := func(s *Scanner, char rune) error {
+    switch char {
+      case 'm':
+        s.setStep(next)
+      case ';', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+      default:
+        return parseError(char, AnyToken)
+    }
+    return nil
+  }
+
+  fn0 := func(s *Scanner, char rune) error {
+    if char != '[' { return parseError(char, AnyToken) }
+    s.step = fn1
+    return nil
+  }
+
+  s.step = fn0
+
+  return true
 }
 
 func isBlank(char rune) bool {
@@ -170,21 +231,21 @@ func parseAny(s *Scanner, char rune) error {
   if isBlank(char) { return nil }
   switch char {
     case '{':
-      s.step = parseMapStart
+      s.setStep(parseMapStart)
     case '[':
-      s.step = parseArrayStart
+      s.setStep(parseArrayStart)
     case 'f':
-      s.step = parseFalse
+      s.setStep(parseFalse)
     case 't':
-      s.step = parseTrue
+      s.setStep(parseTrue)
     case 'n':
-      s.step = parseNull
+      s.setStep(parseNull)
     case '"':
-      s.step = parseString
+      s.setStep(parseString)
     case '-':
-      s.step = parseNegNumber
+      s.setStep(parseNegNumber)
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-      s.step = parseNumber
+      s.setStep(parseNumber)
     default:
       return parseError(char, AnyToken)
   }
@@ -201,7 +262,7 @@ func parseMapStart(s *Scanner, char rune) error {
     s.bufferPos--
     s.finishWithTokenType(MapStartToken)
     s.addObjectType(scannerMap)
-    s.step = parseMapKey
+    s.setStep(parseMapKey)
   }
   return nil
 }
@@ -215,7 +276,7 @@ func parseArrayStart(s *Scanner, char rune) error {
     s.bufferPos--
     s.finishWithTokenType(ArrayStartToken)
     s.addObjectType(scannerArray)
-    s.step = parseAny
+    s.setStep(parseAny)
   }
   return nil
 }
@@ -223,7 +284,7 @@ func parseArrayStart(s *Scanner, char rune) error {
 func parseNegNumber(s *Scanner, char rune) error {
   switch char {
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-      s.step = parseNumber
+      s.setStep(parseNumber)
     default:
       return parseError(char, IntegerLiteralToken)
   }
@@ -240,9 +301,9 @@ func parseNumber(s *Scanner, char rune) error {
 
   switch char {
     case '.':
-      s.step = parseFloat1
+      s.setStep(parseFloat1)
     case 'e', 'E':
-      s.step = parseScientific0
+      s.setStep(parseScientific0)
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
       if s.value == "0" || s.value == "-0" { return parseFloat0(s, char) }
     default:
@@ -254,7 +315,7 @@ func parseNumber(s *Scanner, char rune) error {
 
 func parseFloat0(s *Scanner, char rune) error {
   if char == '.' {
-    s.step = parseFloat1
+    s.setStep(parseFloat1)
   } else {
     return parseError(char, FloatLiteralToken)
   }
@@ -265,7 +326,7 @@ func parseFloat0(s *Scanner, char rune) error {
 func parseFloat1(s *Scanner, char rune) error {
   switch char {
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-      s.step = parseFloat2
+      s.setStep(parseFloat2)
     default:
       return parseError(char, FloatLiteralToken)
   }
@@ -280,7 +341,7 @@ func parseFloat2(s *Scanner, char rune) error {
     return nil
   } else if char == 'e' || char == 'E' {
     s.value += string(char)
-    s.step = parseScientific0
+    s.setStep(parseScientific0)
     return nil
   }
   return parseFloat1(s, char)
@@ -289,9 +350,9 @@ func parseFloat2(s *Scanner, char rune) error {
 func parseScientific0(s *Scanner, char rune) error {
   switch char {
     case '-', '+':
-      s.step = parseScientific1
+      s.setStep(parseScientific1)
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-      s.step = parseScientific2
+      s.setStep(parseScientific2)
     default:
       return parseError(char, ScientificLiteralToken)
   }
@@ -302,7 +363,7 @@ func parseScientific0(s *Scanner, char rune) error {
 func parseScientific1(s *Scanner, char rune) error {
   switch char {
     case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-      s.step = parseScientific2
+      s.setStep(parseScientific2)
     default:
       return parseError(char, ScientificLiteralToken)
   }
@@ -331,7 +392,7 @@ func parseMapKey(s *Scanner, char rune) error {
     if isBlank(char) { return nil }
     s.bufferPos--
     s.finishWithTokenType(MapKeyToken)
-    s.step = parseMapKeyAssign
+    s.setStep(parseMapKeyAssign)
     return nil
   } else if s.value == "" {
     return parseError(char, MapKeyToken)
@@ -344,7 +405,7 @@ func parseMapKeyAssign(s *Scanner, char rune) error {
   if char == ':' {
     s.value += string(char)
     s.finishWithTokenType(MapColonToken)
-    s.step = parseAny
+    s.setStep(parseAny)
     return nil
   }
   return parseError(char, MapColonToken)
@@ -357,9 +418,9 @@ func parseNextInObject(s *Scanner, char rune) error {
     s.value += string(char)
     s.finishWithTokenType(ValueSeparatorToken)
     if s.inObjectType(scannerMap) {
-      s.step = parseMapKey
+      s.setStep(parseMapKey)
     } else {
-      s.step = parseAny
+      s.setStep(parseAny)
     }
     return nil
   } else if char == ']' && s.inObjectType(scannerArray) {
@@ -367,20 +428,20 @@ func parseNextInObject(s *Scanner, char rune) error {
     s.value += string(char)
     s.popObjectType()
     s.finishWithTokenType(ArrayEndToken)
-    s.step = parseNextInObject
+    s.setStep(parseNextInObject)
     return nil
   } else if char == '}' && s.inObjectType(scannerMap) {
     // End of map
     s.value += string(char)
     s.popObjectType()
     s.finishWithTokenType(MapEndToken)
-    s.step = parseNextInObject
+    s.setStep(parseNextInObject)
     return nil
   } else if len(s.dataTypes) == 0 && !isTermination(char) {
     // End of JSON
     s.bufferPos--
     s.finishWithTokenType(StartNewJsonToken)
-    s.step = parseAny
+    s.setStep(parseAny)
     return nil
   }
   return parseError(char, ValueSeparatorToken)
@@ -400,15 +461,23 @@ func parseString(s *Scanner, char rune) error {
 
   s.value += string(char)
 
-  if char == '"' && !s.inStringEsc && inString {
+  if char == '"' && inString {
     s.popObjectType()
   } else if !inString {
     s.addObjectType(scannerString)
   }
 
-  s.inStringEsc = char == '\\' && !s.inStringEsc
+  if char == '\\' {
+    s.setStep(parseStringEsc)
+  }
   // TODO: case '\u'?
 
+  return nil
+}
+
+func parseStringEsc(s *Scanner, char rune) error {
+  s.value += string(char)
+  s.setStep(parseString)
   return nil
 }
 

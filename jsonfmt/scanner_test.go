@@ -218,6 +218,16 @@ func TestString(t *testing.T) {
   testAssertToken(t, "\"123\"", StringLiteralToken, 0, false, scan.Token())
 }
 
+func TestStringUnicode(t *testing.T) {
+  var scan *Scanner
+
+  scan = NewScanner(strings.NewReader("\"WIIINEEE! 🍷🍷🍷\""))
+  scan.buffer = make([]byte, 2) // Reduce buffer size to simulate ending in the middle of a unicode character
+  testAssertTrue(t, scan.Next())
+  testAssertEqual(t, io.EOF, scan.Error())
+  testAssertToken(t, "\"WIIINEEE! 🍷🍷🍷\"", StringLiteralToken, 0, false, scan.Token())
+}
+
 func TestBadString(t *testing.T) {
   var scan *Scanner
 
@@ -249,6 +259,23 @@ func TestValueStream(t *testing.T) {
   var scan *Scanner
 
   scan = NewScanner(strings.NewReader("123\n\"foo\"\nfalse"))
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "123", IntegerLiteralToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "", StartNewJsonToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"foo\"", StringLiteralToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "", StartNewJsonToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "false", BooleanLiteralToken, 0, false, scan.Token())
+  testAssertEqual(t, io.EOF, scan.Error())
+}
+
+func TestConsoleEscValueStream(t *testing.T) {
+  var scan *Scanner
+
+  scan = NewScanner(strings.NewReader("\033[0;23m1\033[0m23\n\033[0;34m\"foo\"\033[0;12m\nfalse\033[0m"))
   testAssertTrue(t, scan.Next())
   testAssertToken(t, "123", IntegerLiteralToken, 0, false, scan.Token())
   testAssertTrue(t, scan.Next())
