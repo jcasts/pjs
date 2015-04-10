@@ -6,6 +6,7 @@ import (
   "regexp"
   "reflect"
   "strings"
+  "../iterator"
 )
 
 
@@ -65,7 +66,7 @@ func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) 
     return
   }
 
-  it, err := newDataIterator(dataSet.Value())
+  it, err := iterator.NewDataIterator(dataSet.Value())
   if err != nil { return }
 
   // Handle matching, recursion
@@ -73,16 +74,16 @@ func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) 
     entry := it.Value()
     if entry == nil { continue }
 
-    if token.matches(entry.key, entry.value) {
+    if token.matches(entry.Key, entry.Value) {
       var lastDataSet PathMatch
       if (len(dataSets) > 0) { lastDataSet = dataSets[len(dataSets)-1] }
-      newDataSet := dataSet.CopyAndAppend(entry.key, entry.value)
+      newDataSet := dataSet.CopyAndAppend(entry.Key, entry.Value)
       if &lastDataSet == nil || !lastDataSet.Equals(newDataSet) {
         dataSets = append(dataSets, newDataSet)
       }
 
     } else if token.isRecursive() {
-      newDataSet := dataSet.CopyAndAppend(entry.key, entry.value)
+      newDataSet := dataSet.CopyAndAppend(entry.Key, entry.Value)
       dataSets = append(dataSets, matchPathToken(token, newDataSet)...)
     }
   }

@@ -26,7 +26,7 @@ func (f *Formatter) Process(r io.Reader, w io.Writer) error {
     token := scanner.Token()
     err = scanner.Error()
     if err != nil { return err }
-    // TODO: Deal with slow writer that doesn't consume all bytes given
+
     _, err = w.Write([]byte(f.Handle(*token)))
     if err != nil { return err }
   }
