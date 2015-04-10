@@ -26,6 +26,7 @@ func (f *Formatter) Process(r io.Reader, w io.Writer) error {
     token := scanner.Token()
     err = scanner.Error()
     if err != nil { return err }
+    // TODO: Deal with slow writer that doesn't consume all bytes given
     _, err = w.Write([]byte(f.Handle(*token)))
     if err != nil { return err }
   }
@@ -34,11 +35,10 @@ func (f *Formatter) Process(r io.Reader, w io.Writer) error {
 }
 
 func (f *Formatter) Handle(token Token) string {
-  value := token.Value
   for _, processor := range f.processors {
-    value = processor.Handle(token)
+    token.Value = processor.Handle(token)
   }
-  return value
+  return token.Value
 }
 
 
@@ -89,26 +89,26 @@ func NewIndentProcessor(prefix, indent string) Processor {
 
 func (p *indentProcessor) Handle(t Token) string {
   switch t.Type {
-  case StringLiteralToken, IntegerLiteralToken, FloatLiteralToken,
-        BooleanLiteralToken, NullLiteralToken, EmptyMapToken, EmptyArrayToken, MapStartToken, ArrayStartToken:
-    if t.InMap {
-      return t.Value
-    } else {
-      return p.indentToken(t)
-    }
-  case MapKeyToken:
-    return p.indentToken(t)
+  case MapKeyToken, StringLiteralToken, IntegerLiteralToken, FloatLiteralToken,
+        BooleanLiteralToken, NullLiteralToken, EmptyMapToken, EmptyArrayToken:
+    return t.Value
+  case MapStartToken, ArrayStartToken:
+    prefix := ""
+    if t.Depth == 0 { prefix = p.prefix }
+    return prefix + t.Value + "\n" + p.indentString("", t.Depth+1)
   case MapEndToken, ArrayEndToken:
-    return "\n" + p.indentToken(t)
+    return "\n" + p.indentString(t.Value, t.Depth)
   case MapColonToken:
     return t.Value + " "
   case ValueSeparatorToken:
-    return t.Value + "\n"
+    return t.Value + "\n" + p.indentString("", t.Depth)
+  case StartNewJsonToken:
+    return "\n\n"
   default:
     return t.Value
   }
 }
 
-func (p *indentProcessor) indentToken(t Token) string {
-  return p.prefix + strings.Repeat(p.indent, t.Depth) + t.Value
+func (p *indentProcessor) indentString(s string, depth int) string {
+  return p.prefix + strings.Repeat(p.indent, depth) + s
 }
