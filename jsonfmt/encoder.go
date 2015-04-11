@@ -21,15 +21,16 @@ func NewOrderedEncoder(datas ...interface{}) *OrderedEncoder {
 func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
   bytesToRead := len(p)
   bytesRead := len(m.buffer)
-  count := 0
 
-  for bytesRead < bytesToRead && m.dataIndex < len(m.datas) && count < 100 {
+  for bytesRead < bytesToRead && m.dataIndex < len(m.datas) {
     var bytes []byte
     var err error
 
     if len(m.iterators) == 0 {
+      // Start new data encoding
       bytes, err = m.encodeData(m.datas[m.dataIndex])
     } else {
+      // Continue previous encoding
       bytes, err = m.encode(m.iterators[len(m.iterators)-1])
     }
     if err != nil { return bytesRead, err }
@@ -43,7 +44,6 @@ func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
         bytesRead++
       }
     }
-    count++
   }
 
   if bytesRead > bytesToRead {
@@ -62,7 +62,8 @@ func (m *OrderedEncoder) encodeData(data interface{}) ([]byte, error) {
   if err != nil {
     return m.jsonEncode(data)
   } else {
-    return m.encode(nextIt)
+    m.iterators = append(m.iterators, nextIt)
+    return []byte{}, nil
   }
 }
 
@@ -89,7 +90,6 @@ func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error) {
     } else {
       b = append(b, byte('['))
     }
-    m.iterators = append(m.iterators, it)
   }
 
   if isMap {
@@ -103,7 +103,7 @@ func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error) {
   if err != nil { return b, err }
   b = append(b, bytes...)
 
-  return b, err
+  return b, nil
 }
 
 func (m *OrderedEncoder) tryAppendComma(b []byte) []byte {
