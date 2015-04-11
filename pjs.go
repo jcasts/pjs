@@ -132,7 +132,11 @@ func main() {
     if len(options.paths) > 0 {
       // TODO
     } else {
-      formatter.Process(jsonfmt.NewOrderedEncoder(js), os.Stdout)
+      err := formatter.Process(jsonfmt.NewOrderedEncoder(js), os.Stdout)
+      if err != nil && err != io.EOF {
+        os.Stdout.WriteString("\n")
+        errorAndExit(3, err.Error())
+      }
     }
     os.Stdout.WriteString("\n")
   }

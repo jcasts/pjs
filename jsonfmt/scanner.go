@@ -112,7 +112,7 @@ func (s *Scanner) Next() bool {
       var err error
       s.bufferLen, err = s.reader.Read(s.buffer)
       s.bufferPos = 0
-      if err != nil {
+      if err != nil && s.bufferLen == 0 {
         s.err = err
         if err == io.EOF {
           s.step(s, ' ') // Force trigger unfinished last values
@@ -449,6 +449,12 @@ func parseNextInObject(s *Scanner, char rune) error {
 
 func parseString(s *Scanner, char rune) error {
   inString := s.inObjectType(scannerString)
+
+  if !inString && s.value == "\"" {
+    s.addObjectType(scannerString)
+    inString = true
+  }
+
   if !inString {
     if isEndOfValue(char) {
       s.bufferPos--
@@ -461,10 +467,8 @@ func parseString(s *Scanner, char rune) error {
 
   s.value += string(char)
 
-  if char == '"' && inString {
+  if char == '"' && inString && len(s.value) > 1 {
     s.popObjectType()
-  } else if !inString {
-    s.addObjectType(scannerString)
   }
 
   if char == '\\' {

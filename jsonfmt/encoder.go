@@ -22,7 +22,7 @@ func (m* OrderedEncoder) Read(p []byte) (n int, err error) {
   bytesToRead := len(p)
   bytesRead := len(m.buffer)
 
-  // TODO: Check if there's a way we can encode less data at once to make it more stream-friendly
+  // TODO: Check if there's a way we can encode less data at once to make it more memory-friendly
   for bytesRead < bytesToRead && m.dataIndex < len(m.datas) {
     encoded, err := encode(m.datas[m.dataIndex])
     if err != nil { return bytesRead, err }
@@ -51,7 +51,15 @@ func (m* OrderedEncoder) Read(p []byte) (n int, err error) {
 
 func encode(data interface{}) ([]byte, error) {
   it, err := iterator.NewSortedDataIterator(data)
-  if err != nil { return json.Marshal(data) }
+  if err != nil {
+    fl, ok := data.(float64)
+    // Hack to compensate for the fact that Go converts all undefined numbers into float64
+    if ok && float64(int64(fl)) == fl {
+      return json.Marshal(int64(fl))
+    } else {
+      return json.Marshal(data)
+    }
+  }
 
   b := []byte{}
 

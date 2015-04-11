@@ -216,6 +216,17 @@ func TestString(t *testing.T) {
   testAssertTrue(t, scan.Next())
   testAssertEqual(t, io.EOF, scan.Error())
   testAssertToken(t, "\"123\"", StringLiteralToken, 0, false, scan.Token())
+
+  scan = NewScanner(strings.NewReader("\"\""))
+  testAssertTrue(t, scan.Next())
+  testAssertEqual(t, io.EOF, scan.Error())
+  testAssertToken(t, "\"\"", StringLiteralToken, 0, false, scan.Token())
+
+  str := `" 3\/4 \u2022 2\/3 \u2022 1\/12 "`
+  scan = NewScanner(strings.NewReader(str))
+  testAssertTrue(t, scan.Next())
+  testAssertEqual(t, io.EOF, scan.Error())
+  testAssertToken(t, str, StringLiteralToken, 0, false, scan.Token())
 }
 
 func TestStringUnicode(t *testing.T) {
