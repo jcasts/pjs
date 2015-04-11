@@ -28,9 +28,9 @@ func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
     var err error
 
     if len(m.iterators) == 0 {
-      bytes, err, _ = m.encodeData(m.datas[m.dataIndex])
+      bytes, err = m.encodeData(m.datas[m.dataIndex])
     } else {
-      bytes, err, _ = m.encode(m.iterators[len(m.iterators)-1])
+      bytes, err = m.encode(m.iterators[len(m.iterators)-1])
     }
     if err != nil { return bytesRead, err }
 
@@ -57,16 +57,16 @@ func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
   }
 }
 
-func (m *OrderedEncoder) encodeData(data interface{}) ([]byte, error, bool) {
+func (m *OrderedEncoder) encodeData(data interface{}) ([]byte, error) {
   nextIt, err := iterator.NewSortedDataIterator(data)
   if err != nil {
-    return jsonEncode(data)
+    return m.jsonEncode(data)
   } else {
     return m.encode(nextIt)
   }
 }
 
-func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error, bool) {
+func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error) {
   b := []byte{}
   isMap := it.HasNamedKeys()
 
@@ -77,10 +77,8 @@ func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error, bool)
     } else {
       b = append(b, byte(']'))
     }
-    if len(m.iterators) > 0 && !m.iterators[len(m.iterators)-1].IsLast() {
-      b = append(b, byte(','))
-    }
-    return b, nil, false
+    b = m.tryAppendComma(b)
+    return b, nil
   }
 
   entry := it.Value()
@@ -96,24 +94,27 @@ func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error, bool)
 
   if isMap {
     key, err := json.Marshal(entry.Name)
-    if err != nil { return b, err, false }
+    if err != nil { return b, err }
     b = append(b, key...)
     b = append(b, byte(':'))
   }
 
-  bytes, err, eod := m.encodeData(entry.Value)
-  if err != nil { return b, err, false }
+  bytes, err := m.encodeData(entry.Value)
+  if err != nil { return b, err }
   b = append(b, bytes...)
 
-  if !it.IsLast() && eod {
+  return b, err
+}
+
+func (m *OrderedEncoder) tryAppendComma(b []byte) []byte {
+  if len(m.iterators) > 0 && !m.iterators[len(m.iterators)-1].IsLast() {
     b = append(b, byte(','))
   }
-
-  return b, err, false
+  return b
 }
 
 
-func jsonEncode(data interface{}) ([]byte, error, bool) {
+func (m *OrderedEncoder) jsonEncode(data interface{}) ([]byte, error) {
   fl, ok := data.(float64)
   var bytes []byte
   var err error
@@ -123,5 +124,6 @@ func jsonEncode(data interface{}) ([]byte, error, bool) {
   } else {
     bytes, err = json.Marshal(data)
   }
-  return bytes, err, true
+  bytes = m.tryAppendComma(bytes)
+  return bytes, err
 }
