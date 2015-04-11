@@ -3,7 +3,6 @@ package jsonfmt
 import (
   "encoding/json"
   "io"
-  "reflect"
   "../iterator"
 )
 
@@ -12,29 +11,39 @@ type OrderedEncoder struct {
   datas []interface{}
   dataIndex int
   buffer []byte
+  iterators []*iterator.DataIterator
 }
 
 func NewOrderedEncoder(datas ...interface{}) *OrderedEncoder {
-  return &OrderedEncoder{datas, 0, []byte{}}
+  return &OrderedEncoder{datas, 0, []byte{}, []*iterator.DataIterator{}}
 }
 
-func (m* OrderedEncoder) Read(p []byte) (n int, err error) {
+func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
   bytesToRead := len(p)
   bytesRead := len(m.buffer)
+  count := 0
 
-  // TODO: Check if there's a way we can encode less data at once to make it more memory-friendly
-  for bytesRead < bytesToRead && m.dataIndex < len(m.datas) {
-    encoded, err := encode(m.datas[m.dataIndex])
+  for bytesRead < bytesToRead && m.dataIndex < len(m.datas) && count < 100 {
+    var bytes []byte
+    var err error
+
+    if len(m.iterators) == 0 {
+      bytes, err, _ = m.encodeData(m.datas[m.dataIndex])
+    } else {
+      bytes, err, _ = m.encode(m.iterators[len(m.iterators)-1])
+    }
     if err != nil { return bytesRead, err }
 
-    m.buffer = append(m.buffer, encoded...)
+    m.buffer = append(m.buffer, bytes...)
     bytesRead = len(m.buffer)
-    m.dataIndex++
-
-    if m.dataIndex < len(m.datas) {
-      m.buffer = append(m.buffer, byte('\n'))
-      bytesRead++
+    if len(m.iterators) == 0 {
+      m.dataIndex++
+      if m.dataIndex < len(m.datas) {
+        m.buffer = append(m.buffer, byte('\n'))
+        bytesRead++
+      }
     }
+    count++
   }
 
   if bytesRead > bytesToRead {
@@ -48,51 +57,71 @@ func (m* OrderedEncoder) Read(p []byte) (n int, err error) {
   }
 }
 
-
-func encode(data interface{}) ([]byte, error) {
-  it, err := iterator.NewSortedDataIterator(data)
+func (m *OrderedEncoder) encodeData(data interface{}) ([]byte, error, bool) {
+  nextIt, err := iterator.NewSortedDataIterator(data)
   if err != nil {
-    fl, ok := data.(float64)
-    // Hack to compensate for the fact that Go converts all undefined numbers into float64
-    if ok && float64(int64(fl)) == fl {
-      return json.Marshal(int64(fl))
-    } else {
-      return json.Marshal(data)
-    }
-  }
-
-  b := []byte{}
-
-  value := reflect.ValueOf(data)
-  isMap := value.Kind() != reflect.Slice && value.Kind() != reflect.Array
-
-  if isMap {
-    b = append(b, byte('{'))
+    return jsonEncode(data)
   } else {
-    b = append(b, byte('['))
+    return m.encode(nextIt)
   }
+}
 
-  for it.Next() {
-    entry := it.Value()
+func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error, bool) {
+  b := []byte{}
+  isMap := it.HasNamedKeys()
+
+  if !it.Next() {
+    m.iterators = m.iterators[0:len(m.iterators)-1]
     if isMap {
-      key, err := json.Marshal(entry.Name)
-      if err != nil { return b, err }
-      b = append(b, key...)
-      b = append(b, byte(':'))
+      b = append(b, byte('}'))
+    } else {
+      b = append(b, byte(']'))
     }
-    bytes, err := encode(entry.Value)
-    if err != nil { return b, err }
-    b = append(b, bytes...)
-    if !it.IsLast() {
+    if len(m.iterators) > 0 && !m.iterators[len(m.iterators)-1].IsLast() {
       b = append(b, byte(','))
     }
+    return b, nil, false
+  }
+
+  entry := it.Value()
+
+  if it.IsFirst() {
+    if isMap {
+      b = append(b, byte('{'))
+    } else {
+      b = append(b, byte('['))
+    }
+    m.iterators = append(m.iterators, it)
   }
 
   if isMap {
-    b = append(b, byte('}'))
-  } else {
-    b = append(b, byte(']'))
+    key, err := json.Marshal(entry.Name)
+    if err != nil { return b, err, false }
+    b = append(b, key...)
+    b = append(b, byte(':'))
   }
 
-  return b, nil
+  bytes, err, eod := m.encodeData(entry.Value)
+  if err != nil { return b, err, false }
+  b = append(b, bytes...)
+
+  if !it.IsLast() && eod {
+    b = append(b, byte(','))
+  }
+
+  return b, err, false
+}
+
+
+func jsonEncode(data interface{}) ([]byte, error, bool) {
+  fl, ok := data.(float64)
+  var bytes []byte
+  var err error
+  // Hack to compensate for the fact that Go converts all undefined numbers into float64
+  if ok && float64(int64(fl)) == fl {
+    bytes, err = json.Marshal(int64(fl))
+  } else {
+    bytes, err = json.Marshal(data)
+  }
+  return bytes, err, true
 }

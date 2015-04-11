@@ -142,6 +142,14 @@ func (d *DataIterator) Reset() {
   d.current = -1
 }
 
+func (d *DataIterator) HasNamedKeys() bool {
+  return d.data.Kind() != reflect.Slice && d.data.Kind() != reflect.Array
+}
+
+func (d *DataIterator) IsFirst() bool {
+  return d.current == 0
+}
+
 func (d *DataIterator) IsLast() bool {
   return d.current == d.keyCount - 1
 }
