@@ -22,6 +22,7 @@ func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
   // with a bunch of data existing items. E.g:
   // encoder.startMap(); encoder.addToMap("key", value); encoder.endMap()
   // encoder.startArray(); encoder.addToArray(value); encoder.endArray()
+  // This would mean no ordering is really possible in maps.
 
   bytesToRead := len(p)
   bytesRead := len(m.buffer)
