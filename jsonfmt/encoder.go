@@ -6,7 +6,6 @@ import (
   "../iterator"
 )
 
-
 type OrderedEncoder struct {
   datas []interface{}
   dataIndex int
@@ -19,6 +18,11 @@ func NewOrderedEncoder(datas ...interface{}) *OrderedEncoder {
 }
 
 func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
+  // TODO: Have a way to request new partial data instead of instantiating
+  // with a bunch of data existing items. E.g:
+  // encoder.startMap(); encoder.addToMap("key", value); encoder.endMap()
+  // encoder.startArray(); encoder.addToArray(value); encoder.endArray()
+
   bytesToRead := len(p)
   bytesRead := len(m.buffer)
 
