@@ -74,16 +74,16 @@ func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) 
     entry := it.Value()
     if entry == nil { continue }
 
-    if token.matches(entry.Key, entry.Value) {
+    if token.matches(entry.Key(), entry.Interface()) {
       var lastDataSet PathMatch
       if (len(dataSets) > 0) { lastDataSet = dataSets[len(dataSets)-1] }
-      newDataSet := dataSet.CopyAndAppend(entry.Key, entry.Value)
+      newDataSet := dataSet.CopyAndAppend(entry.Key(), entry.Interface())
       if &lastDataSet == nil || !lastDataSet.Equals(newDataSet) {
         dataSets = append(dataSets, newDataSet)
       }
 
     } else if token.isRecursive() {
-      newDataSet := dataSet.CopyAndAppend(entry.Key, entry.Value)
+      newDataSet := dataSet.CopyAndAppend(entry.Key(), entry.Interface())
       dataSets = append(dataSets, matchPathToken(token, newDataSet)...)
     }
   }

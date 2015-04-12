@@ -10,6 +10,7 @@ import (
   "strings"
   "./paths"
   "./jsonfmt"
+  "./iterator"
 )
 
 
@@ -132,7 +133,8 @@ func main() {
     if len(options.paths) > 0 {
       // TODO
     } else {
-      err := formatter.Process(jsonfmt.NewOrderedEncoder(js), os.Stdout)
+      itValue := iterator.NewDataValue(js, true)
+      err := formatter.Process(jsonfmt.NewEncoder(itValue), os.Stdout)
       if err != nil && err != io.EOF {
         os.Stdout.WriteString("\n")
         errorAndExit(3, err.Error())

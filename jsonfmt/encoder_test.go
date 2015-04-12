@@ -4,6 +4,7 @@ import (
   "encoding/json"
   "io"
   "testing"
+  "../iterator"
 )
 
 
@@ -42,8 +43,8 @@ func mockMapData() map[string]interface{} {
 
 
 func TestEncodeMapData(t *testing.T) {
-  data := mockMapData()
-  enc := NewOrderedEncoder(data)
+  data := iterator.NewDataValue(mockMapData(), true)
+  enc := NewEncoder(data)
   b := make([]byte, 1024)
   num, err := enc.Read(b)
 
@@ -62,8 +63,8 @@ func TestEncodeMapData(t *testing.T) {
 
 
 func TestEncodeStructData(t *testing.T) {
-  data := mockStructData()
-  enc := NewOrderedEncoder(data)
+  data := iterator.NewDataValue(mockStructData(), true)
+  enc := NewEncoder(data)
   b := make([]byte, 1024)
   num, err := enc.Read(b)
 
@@ -79,7 +80,9 @@ func TestEncodeStructData(t *testing.T) {
 }
 
 func TestEncodeMultiData(t *testing.T) {
-  enc := NewOrderedEncoder(mockStructData(), mockMapData())
+  data1 := iterator.NewDataValue(mockStructData(), true)
+  data2 := iterator.NewDataValue(mockMapData(), true)
+  enc := NewEncoder(data1, data2)
   b := make([]byte, 1024)
   num, err := enc.Read(b)
 
@@ -94,7 +97,7 @@ func TestEncodeMultiData(t *testing.T) {
 }
 
 func TestEncodeWithTinyBuffer(t *testing.T) {
-  enc := NewOrderedEncoder(mockStructData())
+  enc := NewEncoder(iterator.NewDataValue(mockStructData(), true))
   b := make([]byte, 32)
 
   num, err := enc.Read(b)

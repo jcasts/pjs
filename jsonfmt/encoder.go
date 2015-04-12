@@ -6,18 +6,19 @@ import (
   "../iterator"
 )
 
-type OrderedEncoder struct {
-  datas []interface{}
+
+type Encoder struct {
+  datas []iterator.Value
   dataIndex int
   buffer []byte
-  iterators []*iterator.DataIterator
+  iterators []iterator.Iterator
 }
 
-func NewOrderedEncoder(datas ...interface{}) *OrderedEncoder {
-  return &OrderedEncoder{datas, 0, []byte{}, []*iterator.DataIterator{}}
+func NewEncoder(datas ...iterator.Value) *Encoder {
+  return &Encoder{datas, 0, []byte{}, []iterator.Iterator{}}
 }
 
-func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
+func (m *Encoder) Read(p []byte) (n int, err error) {
   // TODO: Have a way to request new partial data instead of instantiating
   // with a bunch of data existing items. E.g:
   // encoder.startMap(); encoder.addToMap("key", value); encoder.endMap()
@@ -62,17 +63,16 @@ func (m *OrderedEncoder) Read(p []byte) (n int, err error) {
   }
 }
 
-func (m *OrderedEncoder) encodeData(data interface{}) ([]byte, error) {
-  nextIt, err := iterator.NewSortedDataIterator(data)
-  if err != nil {
-    return m.jsonEncode(data)
-  } else {
-    m.iterators = append(m.iterators, nextIt)
+func (m *Encoder) encodeData(data iterator.Value) ([]byte, error) {
+  if data.HasIterator() {
+    m.iterators = append(m.iterators, data.Iterator())
     return []byte{}, nil
+  } else {
+    return m.jsonEncode(data.Interface())
   }
 }
 
-func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error) {
+func (m *Encoder) encode(it iterator.Iterator) ([]byte, error) {
   b := []byte{}
   isMap := it.HasNamedKeys()
 
@@ -98,20 +98,20 @@ func (m *OrderedEncoder) encode(it *iterator.DataIterator) ([]byte, error) {
   }
 
   if isMap {
-    key, err := json.Marshal(entry.Name)
+    key, err := json.Marshal(entry.Name())
     if err != nil { return b, err }
     b = append(b, key...)
     b = append(b, byte(':'))
   }
 
-  bytes, err := m.encodeData(entry.Value)
+  bytes, err := m.encodeData(entry)
   if err != nil { return b, err }
   b = append(b, bytes...)
 
   return b, nil
 }
 
-func (m *OrderedEncoder) tryAppendComma(b []byte) []byte {
+func (m *Encoder) tryAppendComma(b []byte) []byte {
   if len(m.iterators) > 0 && !m.iterators[len(m.iterators)-1].IsLast() {
     b = append(b, byte(','))
   }
@@ -119,7 +119,7 @@ func (m *OrderedEncoder) tryAppendComma(b []byte) []byte {
 }
 
 
-func (m *OrderedEncoder) jsonEncode(data interface{}) ([]byte, error) {
+func (m *Encoder) jsonEncode(data interface{}) ([]byte, error) {
   fl, ok := data.(float64)
   var bytes []byte
   var err error

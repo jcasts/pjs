@@ -8,18 +8,60 @@ import (
 )
 
 
-type DataEntry struct {
-  Index   int
-  Name    string
-  Key     interface{}
-  Value   interface{}
+type Iterator interface {
+  Next() bool
+  Value() Value
+  HasNamedKeys() bool
+  IsFirst() bool
+  IsLast() bool
 }
+
+type Value interface {
+  Index() int
+  Name() string
+  Key() interface{}
+  Interface() interface{}
+  HasIterator() bool
+  Iterator() Iterator
+}
+
+type DataValue struct {
+  index   int
+  name    string
+  key     interface{}
+  value   interface{}
+  iterator *DataIterator
+}
+
+func NewDataValue(data interface{}, sorted bool) *DataValue {
+  var it *DataIterator
+  if sorted {
+    it, _ = NewSortedDataIterator(data)
+  } else {
+    it, _ = NewDataIterator(data)
+  }
+  return &DataValue{
+    index: 0,
+    name: "",
+    key: nil,
+    value: data,
+    iterator: it,
+  }
+}
+func (de *DataValue) Index() int { return de.index }
+func (de *DataValue) Key() interface{} { return de.key }
+func (de *DataValue) Name() string { return de.name }
+func (de *DataValue) Interface() interface{} { return de.value }
+func (de *DataValue) Iterator() Iterator { return de.iterator }
+func (de *DataValue) HasIterator() bool { return de.iterator != nil }
+
 
 type DataIterator struct {
   current   int
   keyCount  int
   keys      []reflect.Value
   data      reflect.Value
+  sorted    bool
 }
 
 
@@ -87,6 +129,7 @@ func NewSortedDataIterator(data interface{}) (d *DataIterator, err error) {
   if err == nil && len(d.keys) > 0 &&
       d.data.Kind() != reflect.Slice && d.data.Kind() != reflect.Array {
     sort.Sort(itValueSorter(d.keys))
+    d.sorted = true
   }
   return
 }
@@ -159,30 +202,37 @@ func (d *DataIterator) Next() bool {
   return d.current < d.keyCount
 }
 
-func (d *DataIterator) Value() (de *DataEntry) {
+func (d *DataIterator) Value() Value {
   if d.current >= d.keyCount { return nil }
-  de = &DataEntry{Index: d.current}
+  de := &DataValue{index: d.current}
 
   switch d.data.Kind() {
   case reflect.Struct:
     // Private fields are skipped in the constructor function
     key := d.keys[d.current]
-    de.Name = fmt.Sprintf("%v", key.Interface())
-    de.Key = de.Name
-    de.Value = d.data.FieldByName(de.Name).Interface()
+    de.name = fmt.Sprintf("%v", key.Interface())
+    de.key = de.name
+    de.value = d.data.FieldByName(de.name).Interface()
   case reflect.Map:
     // This is build specifically for JSON which can't have
     // anything other than strings as a map key
     key := d.keys[d.current]
-    de.Name = fmt.Sprintf("%v", key.Interface())
-    de.Key = de.Name
-    de.Value = d.data.MapIndex(key).Interface()
+    de.name = fmt.Sprintf("%v", key.Interface())
+    de.key = de.name
+    de.value = d.data.MapIndex(key).Interface()
   case reflect.Slice, reflect.Array:
-    de.Value = d.data.Index(d.current).Interface()
-    de.Key = d.current
+    de.value = d.data.Index(d.current).Interface()
+    de.key = d.current
   default:
     // Not a traversable structure
     return nil
   }
-  return
+
+  if d.sorted {
+    de.iterator, _ = NewSortedDataIterator(de.value)
+  } else {
+    de.iterator, _ = NewDataIterator(de.value)
+  }
+
+  return de
 }
