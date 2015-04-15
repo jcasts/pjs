@@ -65,70 +65,41 @@ type DataIterator struct {
 }
 
 
-type itValueSorter []reflect.Value
-func (v itValueSorter) Len() int { return len(v) }
-func (v itValueSorter) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
-func (v itValueSorter) Less(i, j int) bool {
+type ValueSorter []reflect.Value
+func (v ValueSorter) Len() int { return len(v) }
+func (v ValueSorter) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
+func (v ValueSorter) Less(i, j int) bool {
   // We're only concerned with JSON for now, so don't get too picky about
   // comparing types not in the JSON spec.
-  if success, less := compareNumeric(v[i], v[j]); success {
-    return less
-  }
+  f1, ok1 := valueToFloat(v[i])
+  f2, ok2 := valueToFloat(v[j])
+  if ok1 && ok2 { return f1 < f2 }
 
   v1 := fmt.Sprintf("%v", v[i].Interface())
   v2 := fmt.Sprintf("%v", v[j].Interface())
-  return sort.StringsAreSorted([]string{v1, v2})
+  return v1 < v2
 }
 
-func compareNumeric(v1, v2 reflect.Value) (success bool, less bool) {
-  intKinds := map[reflect.Kind]bool{
-    reflect.Int: true,
-    reflect.Int8: true,
-    reflect.Int16: true,
-    reflect.Int32: true,
-    reflect.Int64: true,
-  }
-  uintKinds := map[reflect.Kind]bool{
-    reflect.Uint: true,
-    reflect.Uint8: true,
-    reflect.Uint16: true,
-    reflect.Uint32: true,
-    reflect.Uint64: true,
-  }
-  floatKinds := map[reflect.Kind]bool{
-    reflect.Float32: true,
-    reflect.Float64: true,
-  }
-
-  if intKinds[v1.Kind()] && intKinds[v2.Kind()] {
-    return true, v1.Int() < v2.Int()
-  } else if intKinds[v1.Kind()] && uintKinds[v2.Kind()] {
-    return true, v1.Int() < int64(v2.Uint())
-  } else if intKinds[v1.Kind()] && floatKinds[v2.Kind()] {
-    return true, v1.Int() < int64(v2.Float())
-  } else if uintKinds[v1.Kind()] && intKinds[v2.Kind()] {
-    return true, int64(v1.Uint()) < v2.Int()
-  } else if uintKinds[v1.Kind()] && uintKinds[v2.Kind()] {
-    return true, v1.Uint() < v2.Uint()
-  } else if uintKinds[v1.Kind()] && floatKinds[v2.Kind()] {
-    return true, v1.Uint() < uint64(v2.Float())
-  } else if floatKinds[v1.Kind()] && intKinds[v2.Kind()] {
-    return true, int64(v1.Float()) < v2.Int()
-  } else if floatKinds[v1.Kind()] && uintKinds[v2.Kind()] {
-    return true, uint64(v1.Float()) < v2.Uint()
-  } else if floatKinds[v1.Kind()] && floatKinds[v2.Kind()] {
-    return true, v1.Float() < v2.Float()
-  } else {
-    return false, false
+func valueToFloat(v reflect.Value) (f float64, success bool) {
+  switch v.Kind() {
+  case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+    return float64(v.Int()), true
+  case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+    return float64(v.Uint()), true
+  case reflect.Float32, reflect.Float64:
+    return float64(v.Float()), true
+  default:
+    return float64(0), false
   }
 }
 
 
 func NewSortedDataIterator(data interface{}) (d *DataIterator, err error) {
   d, err = NewDataIterator(data)
-  if err == nil && len(d.keys) > 0 &&
-      d.data.Kind() != reflect.Slice && d.data.Kind() != reflect.Array {
-    sort.Sort(itValueSorter(d.keys))
+  if err == nil {
+    if len(d.keys) > 0 && d.data.Kind() != reflect.Slice && d.data.Kind() != reflect.Array {
+      sort.Sort(ValueSorter(d.keys))
+    }
     d.sorted = true
   }
   return

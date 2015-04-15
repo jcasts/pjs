@@ -122,6 +122,7 @@ func main() {
   }
 
   dec := json.NewDecoder(input)
+  encoder := jsonfmt.NewEncoder()
   for {
     var js interface{}
     if err := dec.Decode(&js); err == io.EOF {
@@ -130,15 +131,22 @@ func main() {
       errorAndExit(2, err.Error())
     }
 
+    var itValue iterator.Value
     if len(options.paths) > 0 {
-      // TODO
-    } else {
-      itValue := iterator.NewDataValue(js, true)
-      err := formatter.Process(jsonfmt.NewEncoder(itValue), os.Stdout)
-      if err != nil && err != io.EOF {
-        os.Stdout.WriteString("\n")
-        errorAndExit(3, err.Error())
+      var matches paths.Matches
+      for _, path := range options.paths {
+        matches = append(matches, path.FindMatches(js)...)
       }
+      itValue = matches.IteratorValue()
+    } else {
+      itValue = iterator.NewDataValue(js, true)
+    }
+
+    encoder.Queue(itValue)
+    err := formatter.Process(encoder, os.Stdout)
+    if err != nil && err != io.EOF {
+      os.Stdout.WriteString("\n")
+      errorAndExit(3, err.Error())
     }
     os.Stdout.WriteString("\n")
   }

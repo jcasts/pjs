@@ -14,27 +14,25 @@ type Encoder struct {
   iterators []iterator.Iterator
 }
 
-func NewEncoder(datas ...iterator.Value) *Encoder {
-  return &Encoder{datas, 0, []byte{}, []iterator.Iterator{}}
+func NewEncoder() *Encoder {
+  return &Encoder{[]iterator.Value{}, 0, []byte{}, []iterator.Iterator{}}
+}
+
+func (m *Encoder) Queue(data iterator.Value) {
+  m.datas = append(m.datas, data)
 }
 
 func (m *Encoder) Read(p []byte) (n int, err error) {
-  // TODO: Have a way to request new partial data instead of instantiating
-  // with a bunch of data existing items. E.g:
-  // encoder.startMap(); encoder.addToMap("key", value); encoder.endMap()
-  // encoder.startArray(); encoder.addToArray(value); encoder.endArray()
-  // This would mean no ordering is really possible in maps.
-
   bytesToRead := len(p)
   bytesRead := len(m.buffer)
 
-  for bytesRead < bytesToRead && m.dataIndex < len(m.datas) {
+  for bytesRead < bytesToRead && len(m.datas) > 0 {
     var bytes []byte
     var err error
 
     if len(m.iterators) == 0 {
       // Start new data encoding
-      bytes, err = m.encodeData(m.datas[m.dataIndex])
+      bytes, err = m.encodeData(m.datas[0])
     } else {
       // Continue previous encoding
       bytes, err = m.encode(m.iterators[len(m.iterators)-1])
@@ -44,8 +42,8 @@ func (m *Encoder) Read(p []byte) (n int, err error) {
     m.buffer = append(m.buffer, bytes...)
     bytesRead = len(m.buffer)
     if len(m.iterators) == 0 {
-      m.dataIndex++
-      if m.dataIndex < len(m.datas) {
+      m.datas = m.datas[1:len(m.datas)]
+      if len(m.datas) > 0 {
         m.buffer = append(m.buffer, byte('\n'))
         bytesRead++
       }

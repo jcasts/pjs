@@ -8,19 +8,19 @@ import(
 )
 
 
-func (pms PathMatches) Len() int { return len(pms) }
-func (pms PathMatches) Swap(i, j int) { pms[i], pms[j] = pms[j], pms[i] }
-func (pms PathMatches) Less(i, j int) bool {
+func (pms Matches) Len() int { return len(pms) }
+func (pms Matches) Swap(i, j int) { pms[i], pms[j] = pms[j], pms[i] }
+func (pms Matches) Less(i, j int) bool {
   v1 := pms[i].hashId()
   v2 := pms[j].hashId()
   return sort.StringsAreSorted([]string{v1, v2})
 }
 
 
-func TestPathMatchStruct(t *testing.T) {
+func TestMatchStruct(t *testing.T) {
   var p *path
   var err error
-  var matches PathMatches
+  var matches Matches
 
   data := mockStructData()
 
@@ -60,10 +60,10 @@ func TestPathMatchStruct(t *testing.T) {
 }
 
 
-func TestPathMatchParent(t *testing.T) {
+func TestMatchParent(t *testing.T) {
   var p *path
   var err error
-  var matches PathMatches
+  var matches Matches
 
   data := mockMapData()
 
@@ -107,10 +107,10 @@ func TestPathMatchParent(t *testing.T) {
 }
 
 
-func TestPathMatchRecursive(t *testing.T) {
+func TestMatchRecursive(t *testing.T) {
   var p *path
   var err error
-  var matches PathMatches
+  var matches Matches
 
   data := mockMapData()
 

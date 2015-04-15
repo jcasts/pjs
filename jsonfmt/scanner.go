@@ -70,7 +70,7 @@ func tokenTypeName(t TokenType) string {
 }
 
 
-const bufSize = 1024
+const bufSize = 128 // Benchmarks show this is a pretty optimal buffer size on large JSON structs
 type stepFunc func(*Scanner, rune)error
 
 type Scanner struct {

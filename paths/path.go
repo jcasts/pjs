@@ -1,18 +1,16 @@
 package paths
 
 import (
-  "encoding/json"
   "fmt"
   "regexp"
   "reflect"
-  "strings"
   "../iterator"
 )
 
 
 type Path interface {
   String() string
-  FindMatches(data interface{}) PathMatches
+  FindMatches(data interface{}) Matches
 }
 
 type path struct {
@@ -28,12 +26,12 @@ func (p *path) String() string {
   return p.raw
 }
 
-func (p *path) FindMatches(data interface{}) (matchSets PathMatches) {
+func (p *path) FindMatches(data interface{}) (matchSets Matches) {
   matchKeys := []string{""}
-  uniqMatchSets := map[string]PathMatch{"": NewPathMatch(data)}
+  uniqMatchSets := map[string]Match{"": NewMatch(data)}
   for _, token := range p.tokens {
     newMatchKeys := []string{}
-    newMatchSets := map[string]PathMatch{}
+    newMatchSets := map[string]Match{}
     for _, key := range matchKeys {
       matchSet := uniqMatchSets[key]
       results := matchPathToken(token, matchSet)
@@ -50,15 +48,15 @@ func (p *path) FindMatches(data interface{}) (matchSets PathMatches) {
     if len(uniqMatchSets) == 0 { return }
   }
 
-  matchSets = []PathMatch{}
+  matchSets = []Match{}
   for _, key := range matchKeys {
     matchSets = append(matchSets, uniqMatchSets[key])
   }
   return
 }
 
-func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) {
-  dataSets = []PathMatch{}
+func matchPathToken(token *pathToken, dataSet Match) (dataSets []Match) {
+  dataSets = []Match{}
   if dataSet.Length() == 0 { return }
 
   if token.followParent() {
@@ -75,7 +73,7 @@ func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) 
     if entry == nil { continue }
 
     if token.matches(entry.Key(), entry.Interface()) {
-      var lastDataSet PathMatch
+      var lastDataSet Match
       if (len(dataSets) > 0) { lastDataSet = dataSets[len(dataSets)-1] }
       newDataSet := dataSet.CopyAndAppend(entry.Key(), entry.Interface())
       if &lastDataSet == nil || !lastDataSet.Equals(newDataSet) {
@@ -90,79 +88,6 @@ func matchPathToken(token *pathToken, dataSet PathMatch) (dataSets []PathMatch) 
 
   return
 }
-
-
-type PathMatches []PathMatch
-
-func (pms PathMatches) MarshalJSON() (bytes []byte, err error) {
-  return json.Marshal(pms.buildJsonStruct())
-}
-
-func (pms PathMatches) buildJsonStruct() interface{} {
-  // TODO
-  return nil
-}
-
-
-type PathMatch struct {
-  nodes []*DataNode
-  hashes []string
-}
-
-func (pm PathMatch) hashId() string {
-  return strings.Join(pm.hashes, ":")
-}
-
-func (pm PathMatch) Length() int {
-  return len(pm.nodes)
-}
-
-func (pm PathMatch) NodeAt(index int) *DataNode {
-  return pm.nodes[index]
-}
-
-func (pm PathMatch) CopyAndTrim(rmSize int) PathMatch {
-  length := pm.Length() - rmSize
-  if (length <= 0) { length = 1}
-  return PathMatch{
-    nodes: pm.nodes[0:length],
-    hashes: pm.hashes[0:length],
-  }
-}
-
-func (pm PathMatch) CopyAndAppend(key, value interface{}) PathMatch {
-  node := &DataNode{Key: key, Value: value}
-  nodes := append([]*DataNode{}, pm.nodes...)
-  nodes = append(nodes, node)
-  hashes := append([]string{}, pm.hashes...)
-  hashes = append(hashes, fmt.Sprintf("%v", node.Key))
-  return PathMatch{
-    nodes: nodes,
-    hashes: hashes,
-  }
-}
-
-func (pm PathMatch) Equals(other PathMatch) bool {
-  return pm.hashId() == other.hashId()
-}
-
-func (pm PathMatch) Value() interface{} {
-  return pm.nodes[pm.Length()-1].Value
-}
-
-func NewPathMatch(value interface{}) PathMatch {
-  return PathMatch{
-    nodes: []*DataNode{&DataNode{Value: value}},
-    hashes: []string{""},
-  }
-}
-
-
-type DataNode struct {
-  Key interface{}
-  Value interface{}
-}
-
 
 type pathToken struct {
   keyMatcher *tokenMatcher
