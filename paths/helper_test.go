@@ -49,6 +49,21 @@ func mockStructData() *person {
   return &person{Name: "Bob", Age: 30, Address: addr, password: "iloveu"}
 }
 
+func mockArrayData() map[string]interface{} {
+  return map[string]interface{}{
+    "objects": []interface{} {
+      map[string]interface{}{"name": "bob", "age": 42},
+      map[string]interface{}{"name": "bill", "age": 39},
+      map[string]interface{}{"name": "todd", "age": 28},
+    },
+    "things": []interface{} {
+      "thing1",
+      "thing2",
+      "thing3",
+    },
+  }
+}
+
 func mockMapData() map[string]interface{} {
   return map[string]interface{}{
     "name": "Bob",

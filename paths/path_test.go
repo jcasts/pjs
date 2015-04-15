@@ -173,3 +173,23 @@ func TestMatchRecursive(t *testing.T) {
   testAssertEqual(t, "address", matches[0].NodeAt(1).Key)
   testAssertEqual(t, "pos", matches[0].NodeAt(2).Key)
 }
+
+func TestMatchZeroKey(t *testing.T) {
+  var p *path
+  var err error
+  var matches Matches
+
+  data := mockArrayData()
+
+  p, err = parsePath("objects/**/0")
+  testAssertNil(t, err)
+  matches = p.FindMatches(data)
+  fmt.Println(matches)
+  testAssertEqual(t, 1, len(matches))
+
+  p, err = parsePath("objects/**/0..1")
+  testAssertNil(t, err)
+  matches = p.FindMatches(data)
+  fmt.Println(matches)
+  testAssertEqual(t, 2, len(matches))
+}
