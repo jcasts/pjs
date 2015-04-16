@@ -49,8 +49,8 @@ $ curl api.twitter.com/1.1/notifications.json | pjs
 <li>Can filter JSON data by specific keys or values.</li>
 </ul>
 
-<h2>
-<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+<h3>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h3>
 
 <p>Pjs is written in Go, which means it's highly portable. You can get binaries here:</p>
 
@@ -60,8 +60,8 @@ $ curl api.twitter.com/1.1/notifications.json | pjs
 $ go build -o pjs pjs.go
 </code></pre>
 
-<h2>
-<a id="filtering-json" class="anchor" href="#filtering-json" aria-hidden="true"><span class="octicon octicon-link"></span></a>Filtering JSON</h2>
+<h3>
+<a id="filtering-json" class="anchor" href="#filtering-json" aria-hidden="true"><span class="octicon octicon-link"></span></a>Filtering JSON</h3>
 
 <p>Filtering is done by passing glob-like paths to pjs after the double dash -- delimiter.</p>
 
@@ -75,8 +75,8 @@ $ go build -o pjs pjs.go
 
 <p>Multiple paths can be specified, although the examples will stick to one for simplicity.</p>
 
-<h3>
-<a id="key-matching" class="anchor" href="#key-matching" aria-hidden="true"><span class="octicon octicon-link"></span></a>Key Matching</h3>
+<h4>
+<a id="key-matching" class="anchor" href="#key-matching" aria-hidden="true"><span class="octicon octicon-link"></span></a>Key Matching</h4>
 
 <p>Keys may be complete or partial matches. A partial match is achieved with the wildcard * character:</p>
 
@@ -100,8 +100,8 @@ $ go build -o pjs pjs.go
 }
 </code></pre>
 
-<h3>
-<a id="arrays" class="anchor" href="#arrays" aria-hidden="true"><span class="octicon octicon-link"></span></a>Arrays</h3>
+<h4>
+<a id="arrays" class="anchor" href="#arrays" aria-hidden="true"><span class="octicon octicon-link"></span></a>Arrays</h4>
 
 <p>If you have an array of objects, you can specify a wildcard * for the index in the path:</p>
 
@@ -137,8 +137,8 @@ $ go build -o pjs pjs.go
 }
 </code></pre>
 
-<h3>
-<a id="values" class="anchor" href="#values" aria-hidden="true"><span class="octicon octicon-link"></span></a>Values</h3>
+<h4>
+<a id="values" class="anchor" href="#values" aria-hidden="true"><span class="octicon octicon-link"></span></a>Values</h4>
 
 <p>Similarly, JSON data may be filtered by value, by using the = character:</p>
 
@@ -177,8 +177,8 @@ $ go build -o pjs pjs.go
 }
 </code></pre>
 
-<h3>
-<a id="objects-by-matching-attributes" class="anchor" href="#objects-by-matching-attributes" aria-hidden="true"><span class="octicon octicon-link"></span></a>Objects by Matching Attributes</h3>
+<h4>
+<a id="objects-by-matching-attributes" class="anchor" href="#objects-by-matching-attributes" aria-hidden="true"><span class="octicon octicon-link"></span></a>Objects by Matching Attributes</h4>
 
 <p>Often you'll need to get the full object of a specific user. You could search for it by it's name or id, and then use the parent function, represented by double dots .., to select the parent.</p>
 
@@ -194,8 +194,8 @@ $ go build -o pjs pjs.go
 }
 </code></pre>
 
-<h3>
-<a id="recursive-searches" class="anchor" href="#recursive-searches" aria-hidden="true"><span class="octicon octicon-link"></span></a>Recursive Searches</h3>
+<h4>
+<a id="recursive-searches" class="anchor" href="#recursive-searches" aria-hidden="true"><span class="octicon octicon-link"></span></a>Recursive Searches</h4>
 
 <p>For some data, you may not know how deep the information you need is buried. You can specify a recursive search to get the highest level matches in your data. User the double wildcard ** to recursively search for matches:</p>
 
