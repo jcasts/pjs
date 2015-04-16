@@ -20,8 +20,7 @@ Pjs is written in Go, which means it's highly portable. You can get binaries her
 If you prefer compiling from source, there are no dependencies besides Go:
 
 ```
-$ git clone https://github.com/jcasts/pjs.git && cd pjs
-$ go build -o pjs pjs.go
+$ go get github.com/jcasts/pjs
 ```
 
 ### Filtering JSON
