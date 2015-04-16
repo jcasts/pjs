@@ -185,7 +185,7 @@ $ go build -o pjs pjs.go
 <h4>
 <a id="objects-by-matching-attributes" class="anchor" href="#objects-by-matching-attributes" aria-hidden="true"><span class="octicon octicon-link"></span></a>Objects by Matching Attributes</h4>
 
-<p>Often you'll need to get the full object of a specific user. You could search for it by it's name or id, and then use the parent function, represented by double dots .., to select the parent.</p>
+<p>Often you'll need to get the full object of a specific user. You can search for it by it's name or id, and then use the parent function, represented by double dots .., to select the parent.</p>
 
 <pre><code>$ pjs test.json -- objects/*/name=Amy/..
 {
@@ -202,7 +202,7 @@ $ go build -o pjs pjs.go
 <h4>
 <a id="recursive-searches" class="anchor" href="#recursive-searches" aria-hidden="true"><span class="octicon octicon-link"></span></a>Recursive Searches</h4>
 
-<p>For some data, you may not know how deep the information you need is buried. You can specify a recursive search to get the highest level matches in your data. User the double wildcard ** to recursively search for matches:</p>
+<p>For some data, you may not know how deep the information you need is buried. You can specify a recursive search to get the highest level matches in your data. Use the double wildcard ** to recursively search for matches:</p>
 
 <pre><code>$ pjs test.json -- **/name=Amy/..
 {
