@@ -10,8 +10,8 @@ import (
   "strings"
   "./paths"
   "./jsonfmt"
+  "./iterator"
 )
-import iterator "./iterator"
 
 
 type optionSet struct {
