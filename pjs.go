@@ -138,6 +138,14 @@ func main() {
         matches = append(matches, path.FindMatches(js)...)
       }
       itValue = matches.IteratorValue()
+      if itValue == nil {
+        switch js.(type) {
+        case map[string]interface{}:
+          itValue = iterator.NewDataValue(map[string]interface{}{}, true)
+        case []interface{}:
+          itValue = iterator.NewDataValue([]interface{}{}, true)
+        }
+      }
     } else {
       itValue = iterator.NewDataValue(js, true)
     }

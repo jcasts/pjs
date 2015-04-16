@@ -20,6 +20,8 @@ type matchesIteratorValue struct {
 }
 
 func newMatchesSortedIteratorValue(matches Matches) *matchesIteratorValue {
+  if len(matches) == 0 { return nil }
+
   itValue := &matchesIteratorValue{
     childKeys: []reflect.Value{},
     children: map[string]*matchesIteratorValue{},
@@ -123,7 +125,9 @@ func (i *matchesIterator) IsLast() bool {
 type Matches []Match
 
 func (pms Matches) IteratorValue() iterator.Value {
-  return newMatchesSortedIteratorValue(pms)
+  itValue := newMatchesSortedIteratorValue(pms)
+  if itValue == nil { return nil } // Interface to pointer to nil not recognized as nil
+  return itValue
 }
 
 
