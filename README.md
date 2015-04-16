@@ -142,7 +142,7 @@ $ pjs test.json -- "objects/*/name=Amy|Alison"
 ```
 
 #### Objects by Matching Attributes
-Often you'll need to get the full object of a specific user. You could search for it by it's name or id, and then use the parent function, represented by double dots .., to select the parent.
+Often you'll need to get the full object of a specific user. You can search for it by it's name or id, and then use the parent function, represented by double dots .., to select the parent.
 ```
 $ pjs test.json -- objects/*/name=Amy/..
 {
@@ -157,7 +157,7 @@ $ pjs test.json -- objects/*/name=Amy/..
 ```
  
 #### Recursive Searches
-For some data, you may not know how deep the information you need is buried. You can specify a recursive search to get the highest level matches in your data. User the double wildcard ** to recursively search for matches:
+For some data, you may not know how deep the information you need is buried. You can specify a recursive search to get the highest level matches in your data. Use the double wildcard ** to recursively search for matches:
 
 ```
 $ pjs test.json -- **/name=Amy/..
@@ -176,6 +176,8 @@ $ pjs test.json -- **/name=Amy/..
 ```
 
 These can be chained to search through multiple specific structures.
+
+Escape any special characters with backslash \
 
 ### License
 MIT
