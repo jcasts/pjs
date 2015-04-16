@@ -346,6 +346,28 @@ func TestEmptyArray(t *testing.T) {
   testAssertEqual(t, io.EOF, scan.Error())
 }
 
+func TestEmptyArrayInMap(t *testing.T) {
+  var scan *Scanner
+
+  scan = NewScanner(strings.NewReader("{\"fizz\":\"\u0026\",\"foo\":[],\"bar\":123}"))
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "{", MapStartToken, 0, false, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"fizz\"", MapKeyToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ":", MapColonToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"\u0026\"", StringLiteralToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ",", ValueSeparatorToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"foo\"", MapKeyToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, ":", MapColonToken, 1, true, scan.Token())
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "[]", EmptyArrayToken, 1, true, scan.Token())
+}
+
 func TestArray(t *testing.T) {
   var scan *Scanner
 

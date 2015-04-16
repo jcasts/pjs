@@ -75,6 +75,14 @@ func (m *Encoder) encode(it iterator.Iterator) ([]byte, error) {
   isMap := it.HasNamedKeys()
 
   if !it.Next() {
+    if it.IsFirst() {
+      // Empty iterator
+      if isMap {
+        b = append(b, byte('{'))
+      } else {
+        b = append(b, byte('['))
+      }
+    }
     m.iterators = m.iterators[0:len(m.iterators)-1]
     if isMap {
       b = append(b, byte('}'))

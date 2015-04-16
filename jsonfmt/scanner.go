@@ -143,7 +143,7 @@ func (s *Scanner) Next() bool {
         }
       }
       s.bufferPos += lastRuneLen
-      runeBuffer = runeBuffer[lastRuneLen:len(runeBuffer)]
+      runeBuffer = runeBuffer[lastRuneLen:]
 
       err := s.step(s, char)
 

@@ -44,7 +44,8 @@ func mockMapData() map[string]interface{} {
 
 func TestEncodeMapData(t *testing.T) {
   data := iterator.NewDataValue(mockMapData(), true)
-  enc := NewEncoder(data)
+  enc := NewEncoder()
+  enc.Queue(data)
   b := make([]byte, 1024)
   num, err := enc.Read(b)
 
@@ -64,7 +65,8 @@ func TestEncodeMapData(t *testing.T) {
 
 func TestEncodeStructData(t *testing.T) {
   data := iterator.NewDataValue(mockStructData(), true)
-  enc := NewEncoder(data)
+  enc := NewEncoder()
+  enc.Queue(data)
   b := make([]byte, 1024)
   num, err := enc.Read(b)
 
@@ -79,10 +81,31 @@ func TestEncodeStructData(t *testing.T) {
   testAssertNil(t, err)
 }
 
+func TestEncodeEmptyData(t *testing.T) {
+  data := iterator.NewDataValue([]interface{}{
+    "foo",
+    map[string]interface{}{},
+    []interface{}{},
+    }, true)
+
+  enc := NewEncoder()
+  enc.Queue(data)
+  b := make([]byte, 1024)
+  num, err := enc.Read(b)
+
+  jstr := string(b[0:num])
+  expected := `["foo",{},[]]`
+
+  testAssertEqual(t, io.EOF, err)
+  testAssertEqual(t, expected, jstr)
+}
+
 func TestEncodeMultiData(t *testing.T) {
   data1 := iterator.NewDataValue(mockStructData(), true)
   data2 := iterator.NewDataValue(mockMapData(), true)
-  enc := NewEncoder(data1, data2)
+  enc := NewEncoder()
+  enc.Queue(data1)
+  enc.Queue(data2)
   b := make([]byte, 1024)
   num, err := enc.Read(b)
 
@@ -97,7 +120,8 @@ func TestEncodeMultiData(t *testing.T) {
 }
 
 func TestEncodeWithTinyBuffer(t *testing.T) {
-  enc := NewEncoder(iterator.NewDataValue(mockStructData(), true))
+  enc := NewEncoder()
+  enc.Queue(iterator.NewDataValue(mockStructData(), true))
   b := make([]byte, 32)
 
   num, err := enc.Read(b)
