@@ -57,8 +57,14 @@ Examples:
 
 Options:
 `
+    env_usage := `
+Env Variables:
+  PJS_COLOR   true/false   Set default for color output
+  PJS_INDENT  NUM          Set default indent number
+`
     fmt.Fprintf(os.Stderr, "\n%s - %s", name, usage)
     flagset.PrintDefaults()
+    fmt.Println(env_usage)
     fmt.Fprintf(os.Stderr, "\n")
     os.Exit(2)
   }
@@ -93,13 +99,16 @@ Options:
     errorAndExit(1, "Only one file name may be specified")
   }
 
-  if file != os.Stdin {
-    stat, _ := os.Stdin.Stat()
-    if (stat.Mode() & os.ModeCharDevice) == 0 {
-      // Data is being piped into stdin even though we have a file
+  stat, _ := os.Stdin.Stat()
+  if (stat.Mode() & os.ModeCharDevice) == 0 {
+    // Data is being piped into stdin even though we have a file
+    if file != os.Stdin {
       file.Close()
       errorAndExit(1, "Simultaneous input from pipe and file not supported")
     }
+  } else if file == os.Stdin {
+    // Nothing is being passed to stdin
+    errorAndExit(1, "No input provided. See pjs -h for usage.")
   }
 
   return file, options
