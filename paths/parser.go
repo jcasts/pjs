@@ -124,6 +124,9 @@ func matcherForTokenString(tokenStr string, isKey bool) (*tokenMatcher, error) {
   } else if tokenStr == ".*" {
     matcher.matcherType = anyMatcher
 
+  } else if tokenStr == "null" {
+    matcher.matcherType = nilMatcher
+
   } else {
     matcher.regexpMatcher, err = regexp.Compile("^" + tokenStr + "$")
     matcher.matcherType = stringMatcher

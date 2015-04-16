@@ -36,6 +36,13 @@ func TestParseAny(t *testing.T) {
   testAssertFalse(t, p.tokens[2].matches("b", nil))
 }
 
+func TestParseNil(t *testing.T) {
+  p := testParsePath(t, "foo/*=null")
+  testAssertEqual(t, 2, len(p.tokens))
+  testAssertFalse(t, p.tokens[1].matches(1, "null"))
+  testAssertTrue(t, p.tokens[1].matches(1, nil))
+}
+
 func TestParseValues(t *testing.T) {
   p := testParsePath(t, "foo/*=thing")
   testAssertEqual(t, 2, len(p.tokens))

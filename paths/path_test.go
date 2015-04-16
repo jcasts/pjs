@@ -193,3 +193,18 @@ func TestMatchZeroKey(t *testing.T) {
   fmt.Println(matches)
   testAssertEqual(t, 2, len(matches))
 }
+
+func TestMatchNull(t *testing.T) {
+  var p *path
+  var err error
+  var matches Matches
+
+  data := map[string]interface{}{"foo": "null", "bar": nil}
+
+  p, err = parsePath("**=null")
+  testAssertNil(t, err)
+
+  matches = p.FindMatches(data)
+  testAssertEqual(t, 1, len(matches))
+  testAssertEqual(t, "bar", matches[0].NodeAt(1).Key)
+}

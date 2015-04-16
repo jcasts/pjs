@@ -121,6 +121,7 @@ const (
   rangeMatcher 
   parentMatcher
   anyMatcher
+  nilMatcher
 )
 
 type tokenMatcher struct {
@@ -139,6 +140,10 @@ func (tm *tokenMatcher) matches(value interface{}) bool {
 
   if tm.matcherType == stringMatcher {
     return tm.regexpMatcher != nil && tm.regexpMatcher.MatchString(fmt.Sprintf("%v", value))
+  }
+
+  if value == nil && tm.matcherType == nilMatcher {
+    return true
   }
 
   switch value.(type) {
