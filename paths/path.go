@@ -4,7 +4,7 @@ import (
   "fmt"
   "regexp"
   "reflect"
-  "../iterator"
+  "github.com/jcasts/pjs/iterator"
 )
 
 
