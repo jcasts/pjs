@@ -17,6 +17,7 @@ import (
 type optionSet struct {
   color bool
   indent uint
+  deleteEmptyMatch bool
   paths []paths.Path
 }
 
@@ -38,11 +39,16 @@ func parseFlag() (*os.File, optionSet) {
   if indentEnv <= 0 { indentEnv = 2 }
   options.indent = uint(indentEnv)
 
+  hideEmptyMatchEnv := os.Getenv("PJS_HIDE_EMPTY")
+  options.deleteEmptyMatch = hideEmptyMatchEnv == "true"
+
   name := "pjs"
+  version := "1.0.0"
 
   flagset := flag.NewFlagSet(name, flag.ExitOnError)
   flagset.BoolVar(&options.color, "c", options.color, "\tOutput in colors")
   flagset.UintVar(&options.indent, "i", options.indent, "\tIndent size")
+  flagset.BoolVar(&options.deleteEmptyMatch, "m", options.deleteEmptyMatch, "\tOnly print if a path matches")
 
   flagset.Usage = func() {
     usage := `Pretty print and manipulate JSON data
@@ -59,10 +65,11 @@ Options:
 `
     env_usage := `
 Env Variables:
-  PJS_COLOR   true/false   Set default for color output
-  PJS_INDENT  NUM          Set default indent number
+  PJS_COLOR       true/false   Set default for color output
+  PJS_INDENT      NUM          Set default indent number
+  PJS_HIDE_EMPTY  true/false   Set default behavior for empty matches
 `
-    fmt.Fprintf(os.Stderr, "\n%s - %s", name, usage)
+    fmt.Fprintf(os.Stderr, "\n%s-%s - %s", name, version, usage)
     flagset.PrintDefaults()
     fmt.Println(env_usage)
     fmt.Fprintf(os.Stderr, "\n")
@@ -146,6 +153,8 @@ func main() {
       for _, path := range options.paths {
         matches = append(matches, path.FindMatches(js)...)
       }
+      if len(matches) == 0 && options.deleteEmptyMatch { continue }
+
       itValue = matches.IteratorValue()
       if itValue == nil {
         switch js.(type) {
