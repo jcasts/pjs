@@ -21,6 +21,7 @@ func parsePath(pathStr string) (*path, error) {
   newTokenKey := false
   newTokenValue := false
   processingKey := true
+  inverseMatch := false
 
   var lastToken *pathToken
   currToken := &pathToken{}
@@ -47,6 +48,12 @@ func parsePath(pathStr string) (*path, error) {
         if !processingKey || item != "" {
           newTokenKey = true
         }
+      case '^':
+        if item != "" {
+          err = errors.New("Inverse operator '^' must always be at beginning of matcher. Use \\= to match character.")
+          break
+        }
+        inverseMatch = true
       case '=':
         if !processingKey {
           err = errors.New("Multiple '=' invalid. Use \\= to match character.")
@@ -58,8 +65,9 @@ func parsePath(pathStr string) (*path, error) {
     }
 
     if newTokenKey || newTokenValue {
-      matcher, err = matcherForTokenString(item, processingKey)
+      matcher, err = matcherForTokenString(item, processingKey, inverseMatch)
       item = ""
+      inverseMatch = false
       if processingKey {
         currToken.keyMatcher = matcher
       } else {
@@ -72,9 +80,13 @@ func parsePath(pathStr string) (*path, error) {
     }
 
     if newTokenKey {
-      if lastToken != nil && lastToken.isRecursive() && (lastToken.isAny() || lastToken.followParent()) {
-        currToken.keyMatcher.recursive = true
-        newPath.tokens = newPath.tokens[0:len(newPath.tokens)-1]
+      if lastToken != nil {
+        if lastToken.isRecursive() && (lastToken.isAny() || lastToken.followParent()) {
+          currToken.keyMatcher.recursive = true
+          newPath.tokens = newPath.tokens[0:len(newPath.tokens)-1]
+        } else if currToken.followParent() && lastToken.keyMatcher.inverse {
+          lastToken.keyMatcher.exclusive = true
+        }
       }
       newPath.tokens = append(newPath.tokens, currToken)
       lastToken = currToken
@@ -97,14 +109,14 @@ func parsePath(pathStr string) (*path, error) {
   return newPath, err
 }
 
-func matcherForTokenString(tokenStr string, isKey bool) (*tokenMatcher, error) {
+func matcherForTokenString(tokenStr string, isKey bool, inverseMatch bool) (*tokenMatcher, error) {
   var err error
   rangeRegexp := regexp.MustCompile("^(-?\\d+)\\\\\\.\\\\\\.(-?\\d+)$")
   digitMatches := rangeRegexp.FindAllStringSubmatch(tokenStr, -1)
   digits := []string{}
   if len(digitMatches) > 0 { digits = digitMatches[0] }
 
-  matcher := &tokenMatcher{recursive: false}
+  matcher := &tokenMatcher{recursive: false, inverse: inverseMatch}
 
   if len(digits) >= 3 {
     rStart, _ := strconv.ParseInt(digits[1], 10, 64)

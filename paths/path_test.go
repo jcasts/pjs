@@ -174,6 +174,67 @@ func TestMatchRecursive(t *testing.T) {
   testAssertEqual(t, "pos", matches[0].NodeAt(2).Key)
 }
 
+func TestMatchInverse(t *testing.T) {
+  var p *path
+  var err error
+  var matches Matches
+
+  data := mockMapData()
+  p, err = parsePath("address/^pos|zip")
+  testAssertNil(t, err)
+  matches = p.FindMatches(data)
+  sort.Sort(matches)
+  testAssertEqual(t, 2, len(matches))
+  testAssertEqual(t, "address", matches[0].NodeAt(1).Key)
+  testAssertEqual(t, "city", matches[0].NodeAt(2).Key)
+  testAssertEqual(t, "address", matches[1].NodeAt(1).Key)
+  testAssertEqual(t, "street", matches[1].NodeAt(2).Key)
+}
+
+func TestMatchInverseValue(t *testing.T) {
+  var p *path
+  var err error
+  var matches Matches
+
+  data := mockMapData()
+  p, err = parsePath("address/*=^Cupertino|91234")
+  testAssertNil(t, err)
+  matches = p.FindMatches(data)
+  sort.Sort(matches)
+  testAssertEqual(t, 2, len(matches))
+  testAssertEqual(t, "address", matches[0].NodeAt(1).Key)
+  testAssertEqual(t, "pos", matches[0].NodeAt(2).Key)
+  testAssertEqual(t, "address", matches[1].NodeAt(1).Key)
+  testAssertEqual(t, "street", matches[1].NodeAt(2).Key)
+}
+
+func TestMatchInverseChild(t *testing.T) {
+  var p *path
+  var err error
+  var matches Matches
+
+  data := mockMapData()
+  p, err = parsePath("address/^nothing/..")
+  testAssertNil(t, err)
+  matches = p.FindMatches(data)
+  sort.Sort(matches)
+  testAssertEqual(t, 1, len(matches))
+  testAssertEqual(t, 2, matches[0].Length())
+  testAssertEqual(t, "address", matches[0].NodeAt(1).Key)
+}
+
+func TestMatchInverseChildExclude(t *testing.T) {
+  var p *path
+  var err error
+  var matches Matches
+
+  data := mockMapData()
+  p, err = parsePath("address/^pos|nothing/..")
+  testAssertNil(t, err)
+  matches = p.FindMatches(data)
+  testAssertEqual(t, 0, len(matches))
+}
+
 func TestMatchZeroKey(t *testing.T) {
   var p *path
   var err error

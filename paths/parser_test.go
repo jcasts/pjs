@@ -115,6 +115,31 @@ func TestParseParent(t *testing.T) {
   testAssertFalse(t, p.tokens[2].matches(1, "blah"))
 }
 
+func TestParseInverse(t *testing.T) {
+  p := testParsePath(t, "foo/^bar")
+  testAssertEqual(t, 2, len(p.tokens))
+  testAssertFalse(t, p.tokens[1].isInverseChildMatch())
+  testAssertFalse(t, p.tokens[1].matches("bar", "value"))
+  testAssertTrue(t, p.tokens[1].matches(1, "value"))
+
+  var err error
+  _, err = parsePath("foo/b^ar")
+  testAssertNotNil(t, err)
+
+  p = testParsePath(t, "foo/b\\^ar")
+  testAssertTrue(t, p.tokens[1].matches("b^ar", "value"))
+  p = testParsePath(t, "foo/\\^bar")
+  testAssertTrue(t, p.tokens[1].matches("^bar", "value"))
+}
+
+func TestParseInverseChild(t *testing.T) {
+  p := testParsePath(t, "foo/^bar/..")
+  testAssertEqual(t, 3, len(p.tokens))
+  testAssertTrue(t, p.tokens[1].isInverseChildMatch())
+  testAssertFalse(t, p.tokens[1].matches("bar", "value"))
+  testAssertTrue(t, p.tokens[1].matches(1, "value"))
+}
+
 func TestParseRecursive(t *testing.T) {
   p := testParsePath(t, "foo/bar/**")
   testAssertEqual(t, 3, len(p.tokens))

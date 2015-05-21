@@ -66,12 +66,14 @@ func matchPathToken(token *pathToken, dataSet Match) (dataSets []Match) {
 
   it, err := iterator.NewDataIterator(dataSet.Value())
   if err != nil { return }
+  counter := 0
 
   // Handle matching, recursion
   for it.Next() {
     entry := it.Value()
     if entry == nil { continue }
 
+    counter++
     if token.matches(entry.Key(), entry.Interface()) {
       var lastDataSet Match
       if (len(dataSets) > 0) { lastDataSet = dataSets[len(dataSets)-1] }
@@ -84,6 +86,10 @@ func matchPathToken(token *pathToken, dataSet Match) (dataSets []Match) {
       newDataSet := dataSet.CopyAndAppend(entry.Key(), entry.Interface())
       dataSets = append(dataSets, matchPathToken(token, newDataSet)...)
     }
+  }
+
+  if token.isInverseChildMatch() && len(dataSets) < counter {
+    dataSets = []Match{}
   }
 
   return
@@ -112,6 +118,10 @@ func (t *pathToken) isAny() bool {
     (t.valueMatcher == nil || t.valueMatcher.matcherType == anyMatcher)
 }
 
+func (t *pathToken) isInverseChildMatch() bool {
+  return t.keyMatcher.inverse && t.keyMatcher.exclusive
+}
+
 
 type tokenMatcherType int
 const (
@@ -131,9 +141,19 @@ type tokenMatcher struct {
   boolMatcher bool
   matcherType tokenMatcherType
   recursive bool
+  inverse bool
+  exclusive bool
 }
 
 func (tm *tokenMatcher) matches(value interface{}) bool {
+  if tm.inverse {
+    return !tm.matchesInterface(value)
+  } else {
+    return tm.matchesInterface(value)
+  }
+}
+
+func (tm *tokenMatcher) matchesInterface(value interface{}) bool {
   if tm.matcherType == anyMatcher {
     return true
   }
