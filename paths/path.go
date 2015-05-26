@@ -67,6 +67,7 @@ func matchPathToken(token *pathToken, dataSet Match) (dataSets []Match) {
   it, err := iterator.NewDataIterator(dataSet.Value())
   if err != nil { return }
   counter := 0
+  matchCounter := 0
 
   // Handle matching, recursion
   for it.Next() {
@@ -75,6 +76,7 @@ func matchPathToken(token *pathToken, dataSet Match) (dataSets []Match) {
 
     counter++
     if token.matches(entry.Key(), entry.Interface()) {
+      matchCounter++
       var lastDataSet Match
       if (len(dataSets) > 0) { lastDataSet = dataSets[len(dataSets)-1] }
       newDataSet := dataSet.CopyAndAppend(entry.Key(), entry.Interface())
@@ -85,12 +87,13 @@ func matchPathToken(token *pathToken, dataSet Match) (dataSets []Match) {
       }
 
     } else if token.isRecursive() && !token.inverseMatcher() {
+      matchCounter++
       newDataSet := dataSet.CopyAndAppend(entry.Key(), entry.Interface())
       dataSets = append(dataSets, matchPathToken(token, newDataSet)...)
     }
   }
 
-  if token.isInverseChildMatch() && len(dataSets) < counter {
+  if token.isInverseChildMatch() && matchCounter < counter {
     dataSets = []Match{}
   }
 
