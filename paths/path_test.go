@@ -275,6 +275,21 @@ func TestMatchInverseChildRecursive(t *testing.T) {
   testAssertEqual(t, "employee", matches[4].NodeAt(2).Value)
 }
 
+func TestMatchInverseChildRecursivePart(t *testing.T) {
+  var p *path
+  var err error
+  var matches Matches
+
+  data := mockMapData()
+  p, err = parsePath("**/^pos/../1")
+  testAssertNil(t, err)
+  matches = p.FindMatches(data)
+  sort.Sort(matches)
+  testAssertEqual(t, 1, len(matches))
+  testAssertEqual(t, "roles", matches[0].NodeAt(1).Key)
+  testAssertEqual(t, "employee", matches[0].NodeAt(2).Value)
+}
+
 func TestMatchZeroKey(t *testing.T) {
   var p *path
   var err error
