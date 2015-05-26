@@ -265,11 +265,14 @@ func TestMatchInverseChildRecursive(t *testing.T) {
   testAssertNil(t, err)
   matches = p.FindMatches(data)
   sort.Sort(matches)
-  testAssertEqual(t, 4, len(matches))
+  testAssertEqual(t, 5, len(matches))
   testAssertEqual(t, "age", matches[0].NodeAt(1).Key)
   testAssertEqual(t, "name", matches[1].NodeAt(1).Key)
   testAssertEqual(t, "password", matches[2].NodeAt(1).Key)
   testAssertEqual(t, "roles", matches[3].NodeAt(1).Key)
+  testAssertEqual(t, "eng", matches[3].NodeAt(2).Value)
+  testAssertEqual(t, "roles", matches[4].NodeAt(1).Key)
+  testAssertEqual(t, "employee", matches[4].NodeAt(2).Value)
 }
 
 func TestMatchZeroKey(t *testing.T) {

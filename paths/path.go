@@ -29,7 +29,7 @@ func (p *path) String() string {
 func (p *path) FindMatches(data interface{}) (matchSets Matches) {
   matchKeys := []string{""}
   uniqMatchSets := map[string]Match{"": NewMatch(data)}
-  for _, token := range p.tokens {
+  for tokenIndex, token := range p.tokens {
     newMatchKeys := []string{}
     newMatchSets := map[string]Match{}
     for _, key := range matchKeys {
@@ -45,6 +45,9 @@ func (p *path) FindMatches(data interface{}) (matchSets Matches) {
     }
     matchKeys = newMatchKeys
     uniqMatchSets = newMatchSets
+    if token.isRecursive() && token.isInverseChildMatch() && tokenIndex == len(p.tokens) - 2 {
+      break
+    }
     if len(uniqMatchSets) == 0 { return }
   }
 
