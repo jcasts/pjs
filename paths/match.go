@@ -5,7 +5,7 @@ import (
   "reflect"
   "sort"
   "strings"
-  "github.com/jcasts/pjs/iterator"
+  "../iterator"
 )
 
 type matchesIteratorValue struct {

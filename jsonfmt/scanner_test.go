@@ -4,6 +4,7 @@ import (
   "io"
   "strings"
   "testing"
+  //"fmt"
 )
 
 func testAssertToken(t *testing.T, value string, tt TokenType, depth int, inMap bool, tn *Token) {
@@ -44,12 +45,12 @@ func TestBadInteger(t *testing.T) {
 
   scan = NewScanner(strings.NewReader("1-23"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '-' in integer", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '-' in integer at position 1", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("1lskd23"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character 'l' in integer", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character 'l' in integer at position 1", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 }
 
@@ -79,17 +80,17 @@ func TestBadFloat(t *testing.T) {
 
   scan = NewScanner(strings.NewReader("023"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '2' in float", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '2' in float at position 1", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("-023"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '2' in float", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '2' in float at position 2", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("0.23.3"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '.' in float", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '.' in float at position 4", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 }
 
@@ -134,12 +135,12 @@ func TestBadScientific(t *testing.T) {
 
   scan = NewScanner(strings.NewReader("1.23e--3"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '-' in scientific", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '-' in scientific at position 6", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("1.23e-3."))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '.' in scientific", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '.' in scientific at position 7", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 }
 
@@ -164,12 +165,12 @@ func TestBadBoolean(t *testing.T) {
 
   scan = NewScanner(strings.NewReader("truue"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character 'u' in boolean", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character 'u' in boolean at position 3", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("falsee"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character 'e' in boolean", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character 'e' in boolean at position 5", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 }
 
@@ -189,7 +190,7 @@ func TestBadNull(t *testing.T) {
 
   scan = NewScanner(strings.NewReader("nulll"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character 'l' in null", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character 'l' in null at position 4", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("nul"))
@@ -249,7 +250,7 @@ func TestBadString(t *testing.T) {
 
   scan = NewScanner(strings.NewReader("\"thing\"more"))
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character 'm' in string", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character 'm' in string at position 7", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 }
 
@@ -261,7 +262,7 @@ func TestBadValue(t *testing.T) {
   for _, val := range badValues {
     scan = NewScanner(strings.NewReader(val))
     testAssertFalse(t, scan.Next())
-    testAssertEqual(t, "Unexpected character '"+string(val[0])+"' in JSON", scan.Error().Error())
+    testAssertEqual(t, "Unexpected character '"+string(val[0])+"' in JSON at position 0", scan.Error().Error())
     testAssertTrue(t, scan.Token() == nil)
   }
 }
@@ -307,26 +308,28 @@ func TestBadValueStream(t *testing.T) {
   testAssertTrue(t, scan.Next())
   testAssertToken(t, "\"foo\"", StringLiteralToken, 0, false, scan.Token())
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character ',' in data structure", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character ',' in data structure at position 5", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("\"foo\":false"))
+  testAssertTrue(t, scan.Next())
+  testAssertToken(t, "\"foo\"", StringLiteralToken, 0, false, scan.Token())
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character ':' in string", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character ':' in data structure at position 5", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("\"foo\"]false"))
   testAssertTrue(t, scan.Next())
   testAssertToken(t, "\"foo\"", StringLiteralToken, 0, false, scan.Token())
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character ']' in data structure", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character ']' in data structure at position 5", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("\"foo\"}false"))
   testAssertTrue(t, scan.Next())
   testAssertToken(t, "\"foo\"", StringLiteralToken, 0, false, scan.Token())
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '}' in data structure", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '}' in data structure at position 5", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 }
 
@@ -441,7 +444,7 @@ func TestBadArray(t *testing.T) {
   testAssertTrue(t, scan.Next())
   testAssertToken(t, ",", ValueSeparatorToken, 1, false, scan.Token())
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character ',' in JSON", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character ',' in JSON at position 6", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("[null  123\n, []]"))
@@ -450,7 +453,7 @@ func TestBadArray(t *testing.T) {
   testAssertTrue(t, scan.Next())
   testAssertToken(t, "null", NullLiteralToken, 1, false, scan.Token())
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '1' in data structure", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '1' in data structure at position 7", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 }
 
@@ -508,7 +511,7 @@ func TestMap(t *testing.T) {
 func TestNestedMap(t *testing.T) {
   var scan *Scanner
 
-  scan = NewScanner(strings.NewReader("{\"foo\": {\"bar\":false, \"baz\":true } ,\"21\":{\"sci\":{\"num\":-2.4e7}}}"))
+  scan = NewScanner(strings.NewReader("{\"foo\": {\"bar\\n\":false, \"baz\":true } ,\"21\":{\"sci\":{\"num\":-2.4e7}}}"))
 
   testAssertTrue(t, scan.Next())
   testAssertToken(t, "{", MapStartToken, 0, false, scan.Token())
@@ -519,7 +522,7 @@ func TestNestedMap(t *testing.T) {
   testAssertTrue(t, scan.Next())
   testAssertToken(t, "{", MapStartToken, 1, true, scan.Token())
   testAssertTrue(t, scan.Next())
-  testAssertToken(t, "\"bar\"", MapKeyToken, 2, true, scan.Token())
+  testAssertToken(t, "\"bar\\n\"", MapKeyToken, 2, true, scan.Token())
   testAssertTrue(t, scan.Next())
   testAssertToken(t, ":", MapColonToken, 2, true, scan.Token())
   testAssertTrue(t, scan.Next())
@@ -579,14 +582,14 @@ func TestBadMap(t *testing.T) {
   testAssertTrue(t, scan.Next())
   testAssertToken(t, ",", ValueSeparatorToken, 1, true, scan.Token())
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character ',' in map key", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character ',' in map key at position 13", scan.Error().Error())
   testAssertTrue(t, scan.Token() == nil)
 
   scan = NewScanner(strings.NewReader("{123: 456,\n \"foo\":123}"))
   testAssertTrue(t, scan.Next())
   testAssertToken(t, "{", MapStartToken, 0, false, scan.Token())
   testAssertFalse(t, scan.Next())
-  testAssertEqual(t, "Unexpected character '1' in map key", scan.Error().Error())
+  testAssertEqual(t, "Unexpected character '1' in map key at position 1", scan.Error().Error())
 }
 
 func TestMixedStream(t *testing.T) {

@@ -3,7 +3,7 @@ package jsonfmt
 import (
   "encoding/json"
   "io"
-  "github.com/jcasts/pjs/iterator"
+  "../iterator"
 )
 
 

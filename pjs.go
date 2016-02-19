@@ -8,9 +8,9 @@ import (
   "os"
   "strconv"
   "strings"
-  "github.com/jcasts/pjs/paths"
-  "github.com/jcasts/pjs/jsonfmt"
-  "github.com/jcasts/pjs/iterator"
+  "./paths"
+  "./jsonfmt"
+  "./iterator"
 )
 
 

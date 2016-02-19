@@ -154,6 +154,6 @@ func TestBadJsonFormatter(t *testing.T) {
   f := NewFormatter(NewConsoleColorProcessor(), NewIndentProcessor(">>", " "))
   err := f.Process(strings.NewReader("{123: 123"), &output)
   expectedOutput := ">>{\n>> "
-  testAssertEqual(t, "Unexpected character '1' in map key", err.Error())
+  testAssertEqual(t, "Unexpected character '1' in map key at position 1", err.Error())
   testAssertEqual(t, expectedOutput, string(output))
 }
