@@ -17,6 +17,9 @@ $ curl api.twitter.com/1.1/notifications.json | pjs
 ### Installation
 Pjs is written in Go, which means it's highly portable. You can get binaries here:
 
+* [darwin/amd64](https://github.com/jcasts/pjs/blob/master/bin/darwin_amd64/pjs.zip?raw=true)
+* [linux/amd64](https://github.com/jcasts/pjs/blob/master/bin/linux_amd64/pjs.zip?raw=true)
+
 If you prefer compiling from source, there are no dependencies besides Go:
 
 ```
