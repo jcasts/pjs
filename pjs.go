@@ -43,7 +43,7 @@ func parseFlag() (*os.File, optionSet) {
   options.deleteEmptyMatch = hideEmptyMatchEnv == "true"
 
   name := "pjs"
-  version := "1.0.0"
+  version := "1.0.1"
 
   flagset := flag.NewFlagSet(name, flag.ExitOnError)
   flagset.BoolVar(&options.color, "c", options.color, "\tOutput in colors")
